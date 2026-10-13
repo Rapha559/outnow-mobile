@@ -8,18 +8,54 @@
     "scheme": "outnowtickets",
     "userInterfaceStyle": "light",
     "ios": {
+      "bundleIdentifier": "com.outnowtickets.app",
+      "supportsTablet": false,
+      "associatedDomains": [
+        "applinks:outnowtickets.com",
+        "applinks:www.outnowtickets.com"
+      ],
       "icon": "./assets/expo.icon",
       "config": {
         "usesNonExemptEncryption": false
       }
     },
     "android": {
+      "package": "com.outnowtickets.app",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "outnowtickets.com",
+              "pathPrefix": "/events"
+            },
+            {
+              "scheme": "https",
+              "host": "www.outnowtickets.com",
+              "pathPrefix": "/events"
+            },
+            {
+              "scheme": "https",
+              "host": "outnowtickets.com",
+              "pathPrefix": "/tickets"
+            },
+            {
+              "scheme": "https",
+              "host": "www.outnowtickets.com",
+              "pathPrefix": "/tickets"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
