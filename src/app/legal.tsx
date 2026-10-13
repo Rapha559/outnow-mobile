@@ -1,5 +1,6 @@
 import * as WebBrowser from 'expo-web-browser';
 import { router } from 'expo-router';
+import { type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -17,5 +18,5 @@ export default function LegalScreen(){
     </ScrollView>
   </SafeAreaView></View>;
 }
-function Card({title,children}:{title:string;children:React.ReactNode}){return <View style={styles.card}><Text style={styles.cardTitle}>{title}</Text>{children}</View>}
+function Card({title,children}:{title:string;children:ReactNode}){return <View style={styles.card}><Text style={styles.cardTitle}>{title}</Text>{children}</View>}
 const styles=StyleSheet.create({screen:{flex:1,backgroundColor:'#fff'},top:{height:58,paddingHorizontal:18,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},backButton:{width:40,height:40,borderRadius:20,borderWidth:1,borderColor:'#e5e7eb',alignItems:'center',justifyContent:'center'},back:{fontSize:34,lineHeight:36,marginTop:-4,color:'#111827'},topTitle:{fontWeight:'900',color:'#111827'},content:{paddingHorizontal:18},eyebrow:{color:'#7c3aed',fontSize:11,fontWeight:'900',letterSpacing:1.7,marginTop:10},title:{fontSize:31,lineHeight:36,fontWeight:'900',color:'#111827',marginTop:8},copy:{color:'#6b7280',fontSize:14,lineHeight:21,marginTop:9},card:{marginTop:18,borderRadius:18,borderWidth:1,borderColor:'#e5e7eb',padding:17,backgroundColor:'#fff'},cardTitle:{fontSize:19,fontWeight:'900',color:'#111827',marginBottom:10},body:{fontSize:13,lineHeight:20,color:'#4b5563',marginBottom:9},linkButton:{alignSelf:'flex-start',marginTop:4,paddingVertical:8},linkText:{color:'#7c3aed',fontWeight:'900',fontSize:13},note:{color:'#6b7280',fontSize:11,lineHeight:17,textAlign:'center',marginTop:18}});
