@@ -131,7 +131,7 @@ export default function HomeScreen() {
                         <Text style={styles.fallbackCopy}>Event cover unavailable</Text>
                       </View>
                     )}
-                    <View style={styles.cardOverlay} />
+                    <View style={styles.imageFade} />
                     <View style={styles.categoryPill}><Text style={styles.categoryText}>{event.category || 'Event'}</Text></View>
                     <View style={styles.cardBody}>
                       <Text style={styles.eventDate}>{event.date}</Text>
@@ -177,20 +177,20 @@ const styles = StyleSheet.create({
   retryButton: { marginTop: 7, backgroundColor: '#7c3aed', paddingHorizontal: 18, paddingVertical: 11, borderRadius: 12 },
   retryText: { color: '#ffffff', fontWeight: '800' },
   eventList: { gap: 16 },
-  card: { height: 310, borderRadius: 22, overflow: 'hidden', backgroundColor: '#111827', borderWidth: 1, borderColor: '#e5e7eb' },
-  cardImage: { ...StyleSheet.absoluteFillObject },
-  fallbackImage: { ...StyleSheet.absoluteFillObject, backgroundColor: '#ede9fe', alignItems: 'center', justifyContent: 'center' },
+  card: { height: 340, borderRadius: 22, overflow: 'hidden', backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e5e7eb', shadowColor: '#111827', shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 3 },
+  cardImage: { ...StyleSheet.absoluteFillObject, bottom: 145 },
+  fallbackImage: { ...StyleSheet.absoluteFillObject, bottom: 145, backgroundColor: '#f5f3ff', alignItems: 'center', justifyContent: 'center' },
   fallbackMark: { color: '#7c3aed', fontSize: 28, fontWeight: '900', letterSpacing: 2 },
   fallbackCopy: { color: '#6d28d9', fontSize: 12, fontWeight: '700', marginTop: 7 },
-  cardOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(17,24,39,0.28)' },
-  categoryPill: { position: 'absolute', top: 14, left: 14, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.96)' },
+  imageFade: { position: 'absolute', left: 0, right: 0, top: 150, height: 45, backgroundColor: 'rgba(255,255,255,0.12)' },
+  categoryPill: { position: 'absolute', top: 14, left: 14, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.96)', borderWidth: 1, borderColor: '#ede9fe' },
   categoryText: { color: '#7c3aed', fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.8 },
-  cardBody: { marginTop: 'auto', padding: 18, paddingTop: 22, backgroundColor: 'rgba(17,24,39,0.84)' },
-  eventDate: { color: '#ddd6fe', fontSize: 12, fontWeight: '900', marginBottom: 7 },
-  eventTitle: { color: '#ffffff', fontSize: 24, lineHeight: 28, fontWeight: '900' },
-  eventLocation: { color: '#e5e7eb', fontSize: 13, marginTop: 8 },
-  cardFooter: { flexDirection: 'row', alignItems: 'baseline', marginTop: 16, gap: 6 },
-  fromText: { color: '#d1d5db', fontSize: 9, fontWeight: '800', letterSpacing: 1.3 },
-  price: { color: '#ffffff', fontSize: 19, fontWeight: '900' },
+  cardBody: { position: 'absolute', left: 0, right: 0, bottom: 0, minHeight: 145, padding: 18, backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+  eventDate: { color: '#7c3aed', fontSize: 12, fontWeight: '900', marginBottom: 7 },
+  eventTitle: { color: '#111827', fontSize: 22, lineHeight: 26, fontWeight: '900' },
+  eventLocation: { color: '#6b7280', fontSize: 13, marginTop: 8 },
+  cardFooter: { flexDirection: 'row', alignItems: 'baseline', marginTop: 14, gap: 6 },
+  fromText: { color: '#9ca3af', fontSize: 9, fontWeight: '800', letterSpacing: 1.3 },
+  price: { color: '#111827', fontSize: 19, fontWeight: '900' },
   bottomSpacer: { height: 110 },
 });
