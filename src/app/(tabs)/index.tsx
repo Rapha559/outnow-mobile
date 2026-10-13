@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/auth-context';
 import { apiRequest } from '@/lib/api';
+import { subscribeSocialMutations } from '@/lib/social-sync';
 
 const API_BASE='https://www.outnowtickets.com';
 type EventItem={id:string;title:string;date:string;location:string;venue:string;description:string;category:string;image:string;price:string};
@@ -29,6 +30,7 @@ export default function HomeScreen(){
   async function loadPersonal(){if(!sessionToken){setLikedEvents({});setRecommendations([]);setRecent([]);return;}try{const data=await apiRequest<DiscoveryResponse>('/api/mobile/social/discovery',{},sessionToken);setLikedEvents(Object.fromEntries((data.likedEvents||[]).map(item=>[item.id,true])));setRecommendations(data.recommended||[]);setRecent(data.recentEvents||[]);}catch{}}
   useEffect(()=>{void loadEvents();},[]);
   useEffect(()=>{void loadPersonal();},[sessionToken]);
+  useEffect(()=>subscribeSocialMutations((mutation)=>{if(mutation.type==='like'){setLikedEvents(current=>({...current,[mutation.eventId]:mutation.liked}));void loadPersonal();}else{void loadPersonal();}}),[sessionToken]);
 
   const filteredEvents=useMemo(()=>{const term=query.trim().toLowerCase();if(!term)return events;return events.filter(event=>[event.title,event.category,event.location,event.venue].filter(Boolean).some(value=>value.toLowerCase().includes(term)));},[events,query]);
   async function toggleLike(event:EventItem){if(!isAuthenticated||!sessionToken){router.push({pathname:'/login',params:{redirect:'/'}});return;}const previous=!!likedEvents[event.id];setLikedEvents(current=>({...current,[event.id]:!previous}));try{const result=await apiRequest<{success:true;liked:boolean}>('/api/mobile/social/discovery',{method:'POST',body:JSON.stringify({action:'like',eventId:event.id})},sessionToken);setLikedEvents(current=>({...current,[event.id]:result.liked}));void loadPersonal();}catch{setLikedEvents(current=>({...current,[event.id]:previous}));}}
