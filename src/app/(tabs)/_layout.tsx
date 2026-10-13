@@ -3,10 +3,10 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 export default function TabsLayout() {
   return (
     <NativeTabs
-      backgroundColor="#07070a"
-      selectedColor="#ffffff"
-      selectedBackgroundColor="#1a1722"
-      labelStyle={{ color: '#8f8f9b', selected: { color: '#ffffff', fontWeight: '700' } }}>
+      backgroundColor="#ffffff"
+      selectedColor="#7c3aed"
+      selectedBackgroundColor="#f3efff"
+      labelStyle={{ color: '#6b7280', selected: { color: '#7c3aed', fontWeight: '700' } }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
@@ -14,7 +14,6 @@ export default function TabsLayout() {
           md={{ default: 'home', selected: 'home_filled' }}
         />
       </NativeTabs.Trigger>
-
       <NativeTabs.Trigger name="explore">
         <NativeTabs.Trigger.Label>Explore</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
@@ -22,7 +21,6 @@ export default function TabsLayout() {
           md={{ default: 'search', selected: 'search' }}
         />
       </NativeTabs.Trigger>
-
       <NativeTabs.Trigger name="tickets">
         <NativeTabs.Trigger.Label>Tickets</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
@@ -30,7 +28,6 @@ export default function TabsLayout() {
           md={{ default: 'confirmation_number', selected: 'confirmation_number' }}
         />
       </NativeTabs.Trigger>
-
       <NativeTabs.Trigger name="profile">
         <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
