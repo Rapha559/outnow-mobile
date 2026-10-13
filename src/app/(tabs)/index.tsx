@@ -6,6 +6,7 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -50,6 +51,7 @@ export default function HomeScreen() {
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+  const [likedEvents, setLikedEvents] = useState<Record<string, boolean>>({});
 
   async function loadEvents(showRefresh = false) {
     try {
@@ -79,6 +81,14 @@ export default function HomeScreen() {
         .some((value) => value.toLowerCase().includes(term)),
     );
   }, [events, query]);
+
+  async function shareEvent(event: EventItem) {
+    await Share.share({
+      title: event.title,
+      message: `${event.title}\n${event.date}${event.venue ? ` · ${event.venue}` : ''}\n${API_BASE}/events/${event.id}`,
+      url: `${API_BASE}/events/${event.id}`,
+    });
+  }
 
   return (
     <View style={styles.screen}>
@@ -128,6 +138,7 @@ export default function HomeScreen() {
             <View style={styles.eventList}>
               {filteredEvents.slice(0, 12).map((event) => {
                 const imageFailed = !!failedImages[event.id];
+                const isLiked = !!likedEvents[event.id];
                 return (
                   <Pressable key={event.id} style={styles.card} onPress={() => router.push(`/event/${event.id}`)}>
                     <View style={styles.imageWrap}>
@@ -145,6 +156,28 @@ export default function HomeScreen() {
                         </View>
                       )}
                       <View style={styles.categoryPill}><Text style={styles.categoryText}>{event.category || 'Event'}</Text></View>
+                      <View style={styles.cardActions}>
+                        <Pressable
+                          style={[styles.actionButton, isLiked && styles.actionButtonLiked]}
+                          accessibilityRole="button"
+                          accessibilityLabel={isLiked ? `Unlike ${event.title}` : `Like ${event.title}`}
+                          onPress={(pressEvent) => {
+                            pressEvent.stopPropagation();
+                            setLikedEvents((current) => ({ ...current, [event.id]: !current[event.id] }));
+                          }}>
+                          <Text style={[styles.actionIcon, isLiked && styles.actionIconLiked]}>{isLiked ? '♥' : '♡'}</Text>
+                        </Pressable>
+                        <Pressable
+                          style={styles.actionButton}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Share ${event.title}`}
+                          onPress={(pressEvent) => {
+                            pressEvent.stopPropagation();
+                            void shareEvent(event);
+                          }}>
+                          <Text style={styles.shareIcon}>↗</Text>
+                        </Pressable>
+                      </View>
                     </View>
                     <View style={styles.cardBody}>
                       <Text style={styles.eventDate}>{event.date}</Text>
@@ -198,6 +231,12 @@ const styles = StyleSheet.create({
   fallbackCopy: { color: '#6d28d9', fontSize: 12, fontWeight: '700', marginTop: 7 },
   categoryPill: { position: 'absolute', top: 14, left: 14, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.96)', borderWidth: 1, borderColor: '#ede9fe' },
   categoryText: { color: '#7c3aed', fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.8 },
+  cardActions: { position: 'absolute', top: 12, right: 12, flexDirection: 'row', gap: 8 },
+  actionButton: { width: 39, height: 39, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.96)', borderWidth: 1, borderColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center', shadowColor: '#111827', shadowOpacity: 0.1, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  actionButtonLiked: { backgroundColor: '#faf5ff', borderColor: '#c4b5fd' },
+  actionIcon: { color: '#111827', fontSize: 24, lineHeight: 27, marginTop: -1 },
+  actionIconLiked: { color: '#7c3aed' },
+  shareIcon: { color: '#111827', fontSize: 22, fontWeight: '800', lineHeight: 24, marginTop: -2 },
   cardBody: { padding: 18, backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: '#f3f4f6' },
   eventDate: { color: '#7c3aed', fontSize: 12, fontWeight: '900', marginBottom: 7 },
   eventTitle: { color: '#111827', fontSize: 22, lineHeight: 26, fontWeight: '900' },
