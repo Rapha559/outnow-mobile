@@ -10,6 +10,7 @@
     "ios": {
       "bundleIdentifier": "com.outnowtickets.app",
       "supportsTablet": false,
+      "usesAppleSignIn": true,
       "associatedDomains": [
         "applinks:outnowtickets.com",
         "applinks:www.outnowtickets.com"
@@ -32,82 +33,42 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            {
-              "scheme": "https",
-              "host": "outnowtickets.com",
-              "pathPrefix": "/events"
-            },
-            {
-              "scheme": "https",
-              "host": "www.outnowtickets.com",
-              "pathPrefix": "/events"
-            },
-            {
-              "scheme": "https",
-              "host": "outnowtickets.com",
-              "pathPrefix": "/tickets"
-            },
-            {
-              "scheme": "https",
-              "host": "www.outnowtickets.com",
-              "pathPrefix": "/tickets"
-            }
+            { "scheme": "https", "host": "outnowtickets.com", "pathPrefix": "/events" },
+            { "scheme": "https", "host": "www.outnowtickets.com", "pathPrefix": "/events" },
+            { "scheme": "https", "host": "outnowtickets.com", "pathPrefix": "/tickets" },
+            { "scheme": "https", "host": "www.outnowtickets.com", "pathPrefix": "/tickets" }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
         }
       ],
       "predictiveBackGestureEnabled": false
     },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
-    },
+    "web": { "output": "static", "favicon": "./assets/images/favicon.png" },
     "plugins": [
       "expo-router",
       "expo-notifications",
-      [
-        "expo-secure-store",
-        {
-          "configureAndroidBackup": true,
-          "faceIDPermission": "Allow OutNow Tickets to access Face ID."
+      "expo-apple-authentication",
+      ["expo-secure-store", { "configureAndroidBackup": true, "faceIDPermission": "Allow OutNow Tickets to access Face ID." }],
+      ["expo-image-picker", {
+        "photosPermission": "Allow OutNow Tickets to access your photos so you can choose event cover images.",
+        "cameraPermission": false,
+        "microphonePermission": false,
+        "colors": {
+          "cropToolbarColor": "#FFFFFF",
+          "cropToolbarIconColor": "#111827",
+          "cropToolbarActionTextColor": "#7C3AED",
+          "cropBackButtonIconColor": "#111827",
+          "cropBackgroundColor": "#FFFFFF"
         }
-      ],
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "Allow OutNow Tickets to access your photos so you can choose event cover images.",
-          "cameraPermission": false,
-          "microphonePermission": false,
-          "colors": {
-            "cropToolbarColor": "#FFFFFF",
-            "cropToolbarIconColor": "#111827",
-            "cropToolbarActionTextColor": "#7C3AED",
-            "cropBackButtonIconColor": "#111827",
-            "cropBackgroundColor": "#FFFFFF"
-          }
-        }
-      ],
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Allow OutNow Tickets to use your camera to scan event ticket QR codes.",
-          "microphonePermission": "Allow OutNow Tickets to use your microphone.",
-          "recordAudioAndroid": false,
-          "barcodeScannerEnabled": true
-        }
-      ],
-      [
-        "expo-splash-screen",
-        {
-          "backgroundColor": "#FFFFFF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
-        }
-      ]
+      }],
+      ["expo-camera", {
+        "cameraPermission": "Allow OutNow Tickets to use your camera to scan event ticket QR codes.",
+        "microphonePermission": "Allow OutNow Tickets to use your microphone.",
+        "recordAudioAndroid": false,
+        "barcodeScannerEnabled": true
+      }],
+      ["expo-splash-screen", { "backgroundColor": "#FFFFFF", "image": "./assets/images/splash-icon.png", "imageWidth": 76 }]
     ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    }
+    "experiments": { "typedRoutes": true, "reactCompiler": true }
   }
 }
