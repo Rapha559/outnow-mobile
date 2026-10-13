@@ -22,7 +22,7 @@ function NotificationObserver(){
 
 export default function RootLayout(){
   return <AppErrorBoundary><AuthProvider>
-    <NotificationObserver/><StatusBar style="dark" backgroundColor="#ffffff"/>
+    <NotificationObserver/><StatusBar style="dark"/>
     <Stack screenOptions={{headerShown:false,contentStyle:{backgroundColor:'#ffffff'}}}>
       <Stack.Screen name="(tabs)"/><Stack.Screen name="event/[id]"/><Stack.Screen name="organiser/[id]"/><Stack.Screen name="ticket/[id]"/>
       <Stack.Screen name="customer/orders"/><Stack.Screen name="customer/activity"/><Stack.Screen name="customer/checkout-result"/><Stack.Screen name="customer/reminders"/>
