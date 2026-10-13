@@ -10,6 +10,7 @@ type SettingsItem = {
   subtitle: string;
   icon: string;
   promoterOnly?: boolean;
+  route?: '/legal';
 };
 
 const ITEMS: SettingsItem[] = [
@@ -17,7 +18,8 @@ const ITEMS: SettingsItem[] = [
   { key: 'business', label: 'Business profile', subtitle: 'Organiser name, description and website', icon: '▥', promoterOnly: true },
   { key: 'notifications', label: 'Notifications', subtitle: 'Push, email, reminders and promoter alerts', icon: '♧' },
   { key: 'event-defaults', label: 'Event defaults', subtitle: 'Refund and UK ticket VAT defaults', icon: '⌘', promoterOnly: true },
-  { key: 'audience-privacy', label: 'Audience & privacy', subtitle: 'Marketing choices, privacy and legal', icon: '♙' },
+  { key: 'audience-privacy', label: 'Audience & privacy', subtitle: 'Marketing choices and personalisation', icon: '♙' },
+  { key: 'legal', label: 'Privacy & terms', subtitle: 'Read the key legal information inside OutNow', icon: '§', route: '/legal' },
   { key: 'payments-payouts', label: 'Payments & payouts', subtitle: 'Stripe connection, balances and payout readiness', icon: '▭', promoterOnly: true },
   { key: 'taxpayer-info', label: 'Taxpayer info', subtitle: 'Seller, tax residence and VAT details', icon: '▤', promoterOnly: true },
   { key: 'security-alerts', label: 'Security alerts', subtitle: 'Account protection and session security', icon: '♢' },
@@ -56,7 +58,7 @@ export default function SettingsMenuScreen() {
         <Pressable
           key={item.key}
           style={[styles.row, index === visibleItems.length - 1 && styles.lastRow]}
-          onPress={() => router.push(`/settings/${item.key}` as never)}>
+          onPress={() => item.route ? router.push(item.route) : router.push(`/settings/${item.key}` as never)}>
           <View style={styles.iconWrap}><Text style={styles.icon}>{item.icon}</Text></View>
           <View style={{ flex: 1 }}><Text style={styles.rowTitle}>{item.label}</Text><Text style={styles.rowSub}>{item.subtitle}</Text></View>
           <Text style={styles.chevron}>›</Text>
