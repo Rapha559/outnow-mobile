@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 
 import { apiRequest } from '@/lib/api';
+import { registerRemotePush, unregisterRemotePush } from '@/lib/push-notifications';
 
 const SESSION_KEY = 'outnow_user_session';
 
@@ -47,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!active) return;
         setSessionToken(token);
         setUser(data.user);
+        void registerRemotePush(token).catch(() => undefined);
       } catch {
         await SecureStore.deleteItemAsync(SESSION_KEY);
       } finally {
@@ -64,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await SecureStore.setItemAsync(SESSION_KEY, token);
     setSessionToken(token);
     setUser(nextUser);
+    void registerRemotePush(token).catch(() => undefined);
   }
 
   async function refreshUser() {
@@ -83,6 +86,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await SecureStore.deleteItemAsync(SESSION_KEY);
 
     if (token) {
+      try {
+        await unregisterRemotePush(token);
+      } catch {
+        // Remote push cleanup must never block local sign-out.
+      }
       try {
         await apiRequest('/api/mobile/auth/logout', { method: 'POST' }, token);
       } catch {
