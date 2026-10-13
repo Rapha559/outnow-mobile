@@ -11,7 +11,7 @@ export default function ProfileScreen() {
     return (
       <View style={styles.screen}>
         <SafeAreaView style={styles.center}>
-          <ActivityIndicator size="large" color="#8b5cf6" />
+          <ActivityIndicator size="large" color="#7c3aed" />
         </SafeAreaView>
       </View>
     );
@@ -38,63 +38,32 @@ export default function ProfileScreen() {
             <View style={styles.avatar}><Text style={styles.avatarText}>{initial}</Text></View>
             <View style={styles.profileText}>
               <Text style={styles.profileTitle}>{user?.name || 'Welcome to OutNow'}</Text>
-              <Text style={styles.profileCopy}>
-                {user?.email || 'Sign in or create an account to keep your tickets with you.'}
-              </Text>
+              <Text style={styles.profileCopy}>{user?.email || 'Sign in or create an account to keep your tickets with you.'}</Text>
               {!!user?.role && <Text style={styles.role}>{user.role}</Text>}
             </View>
           </View>
 
           {!isAuthenticated ? (
             <>
-              <Pressable style={styles.primaryButton} onPress={() => router.push('/login')}>
-                <Text style={styles.primaryText}>Sign in</Text>
-              </Pressable>
-              <Pressable style={styles.secondaryButton} onPress={() => router.push('/signup')}>
-                <Text style={styles.secondaryText}>Create account</Text>
-              </Pressable>
+              <Pressable style={styles.primaryButton} onPress={() => router.push('/login')}><Text style={styles.primaryText}>Sign in</Text></Pressable>
+              <Pressable style={styles.secondaryButton} onPress={() => router.push('/signup')}><Text style={styles.secondaryText}>Create account</Text></Pressable>
             </>
           ) : isPromoter ? (
             <>
-              <Pressable style={styles.primaryButton} onPress={() => router.push('/promoter/dashboard')}>
-                <Text style={styles.primaryText}>Open promoter dashboard</Text>
-              </Pressable>
-              <Pressable
-                style={styles.secondaryButton}
-                onPress={() => {
-                  void signOut();
-                }}>
-                <Text style={styles.secondaryText}>Sign out</Text>
-              </Pressable>
+              <Pressable style={styles.primaryButton} onPress={() => router.push('/promoter/dashboard')}><Text style={styles.primaryText}>Open promoter dashboard</Text></Pressable>
+              <Pressable style={styles.secondaryButton} onPress={() => { void signOut(); }}><Text style={styles.secondaryText}>Sign out</Text></Pressable>
             </>
           ) : (
             <>
-              <Pressable style={styles.primaryButton} onPress={() => router.push('/(tabs)/tickets')}>
-                <Text style={styles.primaryText}>View my tickets</Text>
-              </Pressable>
-              <Pressable
-                style={styles.secondaryButton}
-                onPress={() => {
-                  void signOut();
-                }}>
-                <Text style={styles.secondaryText}>Sign out</Text>
-              </Pressable>
+              <Pressable style={styles.primaryButton} onPress={() => router.push('/(tabs)/tickets')}><Text style={styles.primaryText}>View my tickets</Text></Pressable>
+              <Pressable style={styles.secondaryButton} onPress={() => { void signOut(); }}><Text style={styles.secondaryText}>Sign out</Text></Pressable>
             </>
           )}
 
           <View style={styles.menu}>
-            {(isPromoter
-              ? ['Dashboard', 'Events', 'Orders', 'Attendees', 'Payouts', 'Settings']
-              : ['Orders', 'Notifications', 'Help & support', 'Privacy & security']
-            ).map((item) => (
-              <Pressable
-                key={item}
-                style={styles.menuRow}
-                onPress={() => {
-                  if (item === 'Dashboard') router.push('/promoter/dashboard');
-                }}>
-                <Text style={styles.menuText}>{item}</Text>
-                <Text style={styles.chevron}>›</Text>
+            {(isPromoter ? ['Dashboard', 'Events', 'Orders', 'Attendees', 'Payouts', 'Settings'] : ['Orders', 'Notifications', 'Help & support', 'Privacy & security']).map((item) => (
+              <Pressable key={item} style={styles.menuRow} onPress={() => { if (item === 'Dashboard') router.push('/promoter/dashboard'); }}>
+                <Text style={styles.menuText}>{item}</Text><Text style={styles.chevron}>›</Text>
               </Pressable>
             ))}
           </View>
@@ -106,26 +75,26 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#07070a' },
+  screen: { flex: 1, backgroundColor: '#ffffff' },
   safeArea: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content: { paddingHorizontal: 18, paddingTop: 16 },
-  eyebrow: { color: '#a78bfa', fontSize: 11, fontWeight: '900', letterSpacing: 1.8 },
-  title: { color: '#fff', fontSize: 34, lineHeight: 39, fontWeight: '900', marginTop: 10 },
-  copy: { color: '#92929d', fontSize: 15, lineHeight: 22, marginTop: 8 },
-  profileCard: { marginTop: 28, borderRadius: 20, borderWidth: 1, borderColor: '#23232c', backgroundColor: '#101014', padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14 },
-  avatar: { width: 54, height: 54, borderRadius: 27, backgroundColor: '#1d1727', borderWidth: 1, borderColor: '#3a2c50', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#fff', fontSize: 19, fontWeight: '900' },
+  eyebrow: { color: '#7c3aed', fontSize: 11, fontWeight: '900', letterSpacing: 1.8 },
+  title: { color: '#111827', fontSize: 34, lineHeight: 39, fontWeight: '900', marginTop: 10 },
+  copy: { color: '#6b7280', fontSize: 15, lineHeight: 22, marginTop: 8 },
+  profileCard: { marginTop: 28, borderRadius: 20, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#fafafa', padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  avatar: { width: 54, height: 54, borderRadius: 27, backgroundColor: '#f3efff', borderWidth: 1, borderColor: '#ddd6fe', alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: '#7c3aed', fontSize: 19, fontWeight: '900' },
   profileText: { flex: 1 },
-  profileTitle: { color: '#fff', fontSize: 17, fontWeight: '900' },
-  profileCopy: { color: '#8d8d98', fontSize: 12, lineHeight: 18, marginTop: 4 },
-  role: { color: '#a78bfa', fontSize: 9, fontWeight: '900', letterSpacing: 1.1, marginTop: 8 },
+  profileTitle: { color: '#111827', fontSize: 17, fontWeight: '900' },
+  profileCopy: { color: '#6b7280', fontSize: 12, lineHeight: 18, marginTop: 4 },
+  role: { color: '#7c3aed', fontSize: 9, fontWeight: '900', letterSpacing: 1.1, marginTop: 8 },
   primaryButton: { height: 52, borderRadius: 15, backgroundColor: '#7c3aed', alignItems: 'center', justifyContent: 'center', marginTop: 20 },
-  primaryText: { color: '#fff', fontSize: 15, fontWeight: '900' },
-  secondaryButton: { height: 52, borderRadius: 15, borderWidth: 1, borderColor: '#2a2a34', backgroundColor: '#111116', alignItems: 'center', justifyContent: 'center', marginTop: 10 },
-  secondaryText: { color: '#fff', fontSize: 15, fontWeight: '800' },
-  menu: { marginTop: 24, borderRadius: 18, borderWidth: 1, borderColor: '#202028', overflow: 'hidden' },
-  menuRow: { minHeight: 54, backgroundColor: '#101014', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#25252e', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 },
-  menuText: { color: '#d9d9df', fontWeight: '700' },
-  chevron: { color: '#777782', fontSize: 25 },
+  primaryText: { color: '#ffffff', fontSize: 15, fontWeight: '900' },
+  secondaryButton: { height: 52, borderRadius: 15, borderWidth: 1, borderColor: '#d1d5db', backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center', marginTop: 10 },
+  secondaryText: { color: '#111827', fontSize: 15, fontWeight: '800' },
+  menu: { marginTop: 24, borderRadius: 18, borderWidth: 1, borderColor: '#e5e7eb', overflow: 'hidden' },
+  menuRow: { minHeight: 54, backgroundColor: '#ffffff', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#e5e7eb', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 },
+  menuText: { color: '#111827', fontWeight: '700' },
+  chevron: { color: '#9ca3af', fontSize: 25 },
 });
