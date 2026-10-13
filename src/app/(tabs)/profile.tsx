@@ -18,15 +18,20 @@ export default function ProfileScreen() {
   }
 
   const initial = user?.name?.trim().charAt(0).toUpperCase() || 'O';
+  const isPromoter = user?.role === 'PROMOTER';
 
   return (
     <View style={styles.screen}>
       <SafeAreaView edges={['top']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
           <Text style={styles.eyebrow}>OUTNOW ACCOUNT</Text>
-          <Text style={styles.title}>Profile</Text>
+          <Text style={styles.title}>{isPromoter ? 'Promoter Profile' : 'Profile'}</Text>
           <Text style={styles.copy}>
-            {isAuthenticated ? 'Your OutNow account is connected to this device.' : 'Sign in to manage your tickets, orders and account details.'}
+            {isAuthenticated
+              ? isPromoter
+                ? 'Manage your promoter account and open your mobile dashboard.'
+                : 'Your OutNow account is connected to this device.'
+              : 'Sign in to manage your tickets, orders and account details.'}
           </Text>
 
           <View style={styles.profileCard}>
@@ -49,6 +54,19 @@ export default function ProfileScreen() {
                 <Text style={styles.secondaryText}>Create account</Text>
               </Pressable>
             </>
+          ) : isPromoter ? (
+            <>
+              <Pressable style={styles.primaryButton} onPress={() => router.push('/promoter/dashboard')}>
+                <Text style={styles.primaryText}>Open promoter dashboard</Text>
+              </Pressable>
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => {
+                  void signOut();
+                }}>
+                <Text style={styles.secondaryText}>Sign out</Text>
+              </Pressable>
+            </>
           ) : (
             <>
               <Pressable style={styles.primaryButton} onPress={() => router.push('/(tabs)/tickets')}>
@@ -65,8 +83,16 @@ export default function ProfileScreen() {
           )}
 
           <View style={styles.menu}>
-            {['Orders', 'Notifications', 'Help & support', 'Privacy & security'].map((item) => (
-              <Pressable key={item} style={styles.menuRow}>
+            {(isPromoter
+              ? ['Dashboard', 'Events', 'Orders', 'Attendees', 'Payouts', 'Settings']
+              : ['Orders', 'Notifications', 'Help & support', 'Privacy & security']
+            ).map((item) => (
+              <Pressable
+                key={item}
+                style={styles.menuRow}
+                onPress={() => {
+                  if (item === 'Dashboard') router.push('/promoter/dashboard');
+                }}>
                 <Text style={styles.menuText}>{item}</Text>
                 <Text style={styles.chevron}>›</Text>
               </Pressable>
