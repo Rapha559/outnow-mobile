@@ -30,9 +30,17 @@ type EventItem = {
 function imageUrl(value?: string | null) {
   const clean = String(value || '').trim();
   if (!clean) return `${API_BASE}/images/event-placeholder.jpg`;
-  if (/^http:\/\//i.test(clean)) return clean.replace(/^http:\/\//i, 'https://');
-  if (/^https:\/\//i.test(clean)) return clean;
-  return `${API_BASE}${clean.startsWith('/') ? clean : `/${clean}`}`;
+
+  const secure = /^http:\/\//i.test(clean)
+    ? clean.replace(/^http:\/\//i, 'https://')
+    : clean;
+
+  if (/^https:\/\/res\.cloudinary\.com\//i.test(secure)) {
+    return `${API_BASE}/api/mobile/media/image?url=${encodeURIComponent(secure)}`;
+  }
+
+  if (/^https:\/\//i.test(secure)) return secure;
+  return `${API_BASE}${secure.startsWith('/') ? secure : `/${secure}`}`;
 }
 
 export default function HomeScreen() {
@@ -51,6 +59,7 @@ export default function HomeScreen() {
       const data = await response.json();
       if (!response.ok || !data?.success) throw new Error(data?.message || 'Failed to load events.');
       setEvents(Array.isArray(data.events) ? data.events : []);
+      setFailedImages({});
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load events.');
     } finally {
