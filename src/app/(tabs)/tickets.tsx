@@ -1,163 +1,30 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/auth-context';
 import { API_BASE, apiRequest } from '@/lib/api';
 
-type MobileTicket = {
-  id: string;
-  ticketNumber: string;
-  status: string;
-  attendeeName?: string | null;
-  attendeeEmail?: string | null;
-  qrCode: string;
-  qrDataUrl: string;
-  ticketType: { id: string; name: string; price: number };
-  order: { id: string; orderNumber: string; status: string; total: number };
-  event: {
-    id: string;
-    title: string;
-    date: string;
-    endDate?: string | null;
-    venue: string;
-    location: string;
-    image?: string | null;
-    status: string;
-  };
-};
+type MobileTicket={id:string;ticketNumber:string;status:string;attendeeName?:string|null;attendeeEmail?:string|null;qrCode:string;qrDataUrl:string;ticketType:{id:string;name:string;price:number};order:{id:string;orderNumber:string;status:string;total:number};event:{id:string;title:string;date:string;endDate?:string|null;venue:string;location:string;image?:string|null;status:string}};
+function imageUrl(value?:string|null){if(!value)return `${API_BASE}/images/event-placeholder.jpg`;return /^https?:\/\//i.test(value)?value:`${API_BASE}${value.startsWith('/')?value:`/${value}`}`;}
+function dateLabel(value:string){const d=new Date(value);return Number.isNaN(d.getTime())?value:new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(d);}
 
-function imageUrl(value?: string | null) {
-  if (!value) return `${API_BASE}/images/event-placeholder.jpg`;
-  if (/^https?:\/\//i.test(value)) return value;
-  return `${API_BASE}${value.startsWith('/') ? value : `/${value}`}`;
+export default function TicketsScreen(){
+  const {loading:authLoading,isAuthenticated,sessionToken}=useAuth();const [tickets,setTickets]=useState<MobileTicket[]>([]);const [loading,setLoading]=useState(false);const [refreshing,setRefreshing]=useState(false);const [error,setError]=useState('');const [filter,setFilter]=useState<'UPCOMING'|'ALL'|'PAST'>('UPCOMING');
+  async function loadTickets(refresh=false){if(!sessionToken)return;try{refresh?setRefreshing(true):setLoading(true);setError('');const data=await apiRequest<{success:true;tickets:MobileTicket[]}>('/api/mobile/tickets',{},sessionToken);setTickets(data.tickets||[]);}catch(err){setError(err instanceof Error?err.message:'Unable to load your tickets.');}finally{setLoading(false);setRefreshing(false);}}
+  useEffect(()=>{if(sessionToken)void loadTickets();else setTickets([]);},[sessionToken]);
+  const visible=useMemo(()=>{const now=Date.now();return tickets.filter(ticket=>{const end=new Date(ticket.event.endDate||ticket.event.date).getTime();if(filter==='ALL')return true;if(filter==='PAST')return end<now;return end>=now;});},[tickets,filter]);
+  if(authLoading)return <View style={styles.screen}><SafeAreaView style={styles.center}><ActivityIndicator size="large" color="#7c3aed"/></SafeAreaView></View>;
+  return <View style={styles.screen}><SafeAreaView edges={['top']} style={styles.safe}><ScrollView contentContainerStyle={styles.content} refreshControl={isAuthenticated?<RefreshControl refreshing={refreshing} onRefresh={()=>void loadTickets(true)} tintColor="#7c3aed" colors={['#7c3aed']}/>:undefined}>
+    <Text style={styles.eyebrow}>YOUR OUTNOW</Text><Text style={styles.title}>My Tickets</Text><Text style={styles.copy}>Open a ticket for the full QR code, transfer controls and refund options.</Text>
+    {!isAuthenticated?<View style={styles.state}><Text style={styles.icon}>🎟</Text><Text style={styles.cardTitle}>Sign in to see your tickets</Text><Text style={styles.cardCopy}>Use the same OutNow account you used when purchasing.</Text><Pressable style={styles.primary} onPress={()=>router.push('/login')}><Text style={styles.primaryText}>Sign in</Text></Pressable><Pressable style={styles.secondary} onPress={()=>router.push('/signup')}><Text style={styles.secondaryText}>Create account</Text></Pressable></View>:loading?<View style={styles.state}><ActivityIndicator size="large" color="#7c3aed"/></View>:error?<View style={styles.state}><Text style={styles.cardTitle}>Couldn't load tickets</Text><Text style={styles.cardCopy}>{error}</Text><Pressable style={styles.primary} onPress={()=>void loadTickets()}><Text style={styles.primaryText}>Try again</Text></Pressable></View>:tickets.length===0?<View style={styles.state}><Text style={styles.icon}>🎟</Text><Text style={styles.cardTitle}>No tickets yet</Text><Text style={styles.cardCopy}>Confirmed Stripe purchases will appear here automatically.</Text><Pressable style={styles.primary} onPress={()=>router.push('/(tabs)/explore')}><Text style={styles.primaryText}>Explore events</Text></Pressable></View>:<>
+      <View style={styles.quickRow}><Pressable style={styles.ordersButton} onPress={()=>router.push('/customer/orders')}><Text style={styles.ordersText}>Order history</Text></Pressable></View>
+      <View style={styles.filters}>{(['UPCOMING','ALL','PAST'] as const).map(item=><Pressable key={item} onPress={()=>setFilter(item)} style={[styles.filter,filter===item&&styles.filterActive]}><Text style={[styles.filterText,filter===item&&styles.filterTextActive]}>{item==='UPCOMING'?'Upcoming':item==='PAST'?'Past':'All'}</Text></Pressable>)}</View>
+      {visible.length===0?<View style={styles.state}><Text style={styles.cardTitle}>No {filter.toLowerCase()} tickets</Text><Text style={styles.cardCopy}>Try another filter or browse upcoming events.</Text></View>:<View style={styles.list}>{visible.map(ticket=><Pressable key={ticket.id} style={styles.card} onPress={()=>router.push({pathname:'/ticket/[id]',params:{id:ticket.id}})}><Image source={{uri:imageUrl(ticket.event.image)}} style={styles.image} contentFit="cover"/><View style={styles.body}><View style={styles.row}><Text style={styles.type}>{ticket.ticketType.name}</Text><View style={[styles.badge,ticket.status==='VALID'&&styles.validBadge]}><Text style={[styles.badgeText,ticket.status==='VALID'&&styles.validText]}>{ticket.status}</Text></View></View><Text style={styles.eventTitle}>{ticket.event.title}</Text><Text style={styles.meta}>{dateLabel(ticket.event.date)}</Text><Text style={styles.meta}>{ticket.event.venue} · {ticket.event.location}</Text><View style={styles.bottom}><View><Text style={styles.ticketNo}>{ticket.ticketNumber}</Text><Text style={styles.orderNo}>Order {ticket.order.orderNumber}</Text></View><Text style={styles.open}>Open ticket ›</Text></View></View></Pressable>)}</View>}
+    </>}
+    <View style={{height:120}}/>
+  </ScrollView></SafeAreaView></View>;
 }
-
-export default function TicketsScreen() {
-  const { loading: authLoading, isAuthenticated, sessionToken } = useAuth();
-  const [tickets, setTickets] = useState<MobileTicket[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState('');
-
-  async function loadTickets(refresh = false) {
-    if (!sessionToken) return;
-    try {
-      refresh ? setRefreshing(true) : setLoading(true);
-      setError('');
-      const data = await apiRequest<{ success: true; tickets: MobileTicket[] }>('/api/mobile/tickets', {}, sessionToken);
-      setTickets(data.tickets || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load your tickets.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }
-
-  useEffect(() => {
-    if (sessionToken) void loadTickets();
-    else setTickets([]);
-  }, [sessionToken]);
-
-  if (authLoading) {
-    return <View style={styles.screen}><SafeAreaView style={styles.center}><ActivityIndicator size="large" color="#7c3aed" /></SafeAreaView></View>;
-  }
-
-  return (
-    <View style={styles.screen}>
-      <SafeAreaView edges={['top']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content} refreshControl={isAuthenticated ? <RefreshControl refreshing={refreshing} onRefresh={() => void loadTickets(true)} tintColor="#7c3aed" colors={['#7c3aed']} /> : undefined}>
-          <Text style={styles.eyebrow}>YOUR OUTNOW</Text>
-          <Text style={styles.title}>My Tickets</Text>
-          <Text style={styles.copy}>Your purchased tickets and live entry QR codes are stored here.</Text>
-
-          {!isAuthenticated ? (
-            <View style={styles.stateCard}>
-              <View style={styles.iconCircle}><Text style={styles.icon}>🎟</Text></View>
-              <Text style={styles.cardTitle}>Sign in to see your tickets</Text>
-              <Text style={styles.cardCopy}>Use the same OutNow account you used when purchasing.</Text>
-              <Pressable style={styles.primary} onPress={() => router.push('/login')}><Text style={styles.primaryText}>Sign in</Text></Pressable>
-              <Pressable style={styles.secondary} onPress={() => router.push('/signup')}><Text style={styles.secondaryText}>Create account</Text></Pressable>
-            </View>
-          ) : loading ? (
-            <View style={styles.stateCard}><ActivityIndicator size="large" color="#7c3aed" /><Text style={styles.cardCopy}>Loading your tickets…</Text></View>
-          ) : error ? (
-            <View style={styles.stateCard}><Text style={styles.cardTitle}>Couldn't load tickets</Text><Text style={styles.cardCopy}>{error}</Text><Pressable style={styles.primary} onPress={() => void loadTickets()}><Text style={styles.primaryText}>Try again</Text></Pressable></View>
-          ) : tickets.length === 0 ? (
-            <View style={styles.stateCard}>
-              <View style={styles.iconCircle}><Text style={styles.icon}>🎟</Text></View>
-              <Text style={styles.cardTitle}>No tickets yet</Text>
-              <Text style={styles.cardCopy}>After your Stripe payment is confirmed, your ticket will appear here automatically.</Text>
-              <Pressable style={styles.primary} onPress={() => router.push('/(tabs)/explore')}><Text style={styles.primaryText}>Explore events</Text></Pressable>
-            </View>
-          ) : (
-            <View style={styles.ticketList}>
-              {tickets.map((ticket) => {
-                const eventDate = new Date(ticket.event.date);
-                const dateText = Number.isNaN(eventDate.getTime()) ? ticket.event.date : new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(eventDate);
-                const valid = ticket.status === 'VALID';
-                return (
-                  <View key={ticket.id} style={styles.ticketCard}>
-                    <Image source={{ uri: imageUrl(ticket.event.image) }} style={styles.eventImage} contentFit="cover" />
-                    <View style={styles.ticketBody}>
-                      <View style={styles.statusRow}>
-                        <Text style={styles.typeLabel}>{ticket.ticketType.name}</Text>
-                        <View style={[styles.statusPill, !valid && styles.statusPillMuted]}><Text style={styles.statusText}>{ticket.status}</Text></View>
-                      </View>
-                      <Text style={styles.eventTitle}>{ticket.event.title}</Text>
-                      <Text style={styles.meta}>{dateText}</Text>
-                      <Text style={styles.meta}>{ticket.event.venue} · {ticket.event.location}</Text>
-                      <View style={styles.qrWrap}><Image source={{ uri: ticket.qrDataUrl }} style={styles.qrImage} contentFit="contain" /></View>
-                      <Text style={styles.ticketNumber}>{ticket.ticketNumber}</Text>
-                      <Text style={styles.orderNumber}>Order {ticket.order.orderNumber}</Text>
-                      <Text style={styles.scanNote}>Show this QR code at the entrance. Do not share it publicly.</Text>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-          <View style={{ height: 120 }} />
-        </ScrollView>
-      </SafeAreaView>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#ffffff' },
-  safeArea: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  content: { paddingHorizontal: 18, paddingTop: 16 },
-  eyebrow: { color: '#7c3aed', fontSize: 11, fontWeight: '900', letterSpacing: 1.8 },
-  title: { color: '#111827', fontSize: 34, lineHeight: 39, fontWeight: '900', marginTop: 10 },
-  copy: { color: '#6b7280', fontSize: 15, lineHeight: 22, marginTop: 8, maxWidth: 360 },
-  stateCard: { marginTop: 30, minHeight: 260, borderRadius: 22, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#fafafa', alignItems: 'center', justifyContent: 'center', padding: 28 },
-  iconCircle: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#f3efff', alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
-  icon: { fontSize: 30 },
-  cardTitle: { color: '#111827', fontSize: 20, fontWeight: '900', textAlign: 'center' },
-  cardCopy: { color: '#6b7280', textAlign: 'center', lineHeight: 21, marginTop: 10 },
-  primary: { minWidth: 190, height: 50, borderRadius: 15, backgroundColor: '#7c3aed', alignItems: 'center', justifyContent: 'center', marginTop: 20, paddingHorizontal: 18 },
-  primaryText: { color: '#ffffff', fontWeight: '900' },
-  secondary: { minWidth: 190, height: 48, borderRadius: 15, borderWidth: 1, borderColor: '#d1d5db', backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center', marginTop: 9 },
-  secondaryText: { color: '#111827', fontWeight: '800' },
-  ticketList: { marginTop: 28, gap: 18 },
-  ticketCard: { borderRadius: 24, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#ffffff', overflow: 'hidden' },
-  eventImage: { width: '100%', height: 150, backgroundColor: '#f3f4f6' },
-  ticketBody: { padding: 18 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  typeLabel: { color: '#7c3aed', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },
-  statusPill: { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 999, backgroundColor: '#dcfce7' },
-  statusPillMuted: { backgroundColor: '#f3f4f6' },
-  statusText: { color: '#166534', fontSize: 9, fontWeight: '900' },
-  eventTitle: { color: '#111827', fontSize: 23, lineHeight: 28, fontWeight: '900', marginTop: 11 },
-  meta: { color: '#6b7280', fontSize: 12, lineHeight: 18, marginTop: 4 },
-  qrWrap: { alignSelf: 'center', backgroundColor: '#ffffff', borderRadius: 18, padding: 12, marginTop: 22, borderWidth: 1, borderColor: '#e5e7eb' },
-  qrImage: { width: 220, height: 220 },
-  ticketNumber: { color: '#111827', textAlign: 'center', fontSize: 13, fontWeight: '900', letterSpacing: 1, marginTop: 14 },
-  orderNumber: { color: '#6b7280', textAlign: 'center', fontSize: 10, marginTop: 4 },
-  scanNote: { color: '#6b7280', textAlign: 'center', fontSize: 10, lineHeight: 15, marginTop: 12 },
-});
+const styles=StyleSheet.create({screen:{flex:1,backgroundColor:'#fff'},safe:{flex:1},center:{flex:1,alignItems:'center',justifyContent:'center'},content:{paddingHorizontal:18,paddingTop:16},eyebrow:{color:'#7c3aed',fontSize:11,fontWeight:'900',letterSpacing:1.8},title:{color:'#111827',fontSize:34,fontWeight:'900',marginTop:10},copy:{color:'#6b7280',fontSize:14,lineHeight:21,marginTop:8},state:{marginTop:28,minHeight:230,borderRadius:22,borderWidth:1,borderColor:'#e5e7eb',backgroundColor:'#fafafa',alignItems:'center',justifyContent:'center',padding:26},icon:{fontSize:32,marginBottom:15},cardTitle:{color:'#111827',fontSize:19,fontWeight:'900',textAlign:'center'},cardCopy:{color:'#6b7280',textAlign:'center',lineHeight:20,marginTop:9},primary:{minWidth:180,height:50,borderRadius:15,backgroundColor:'#7c3aed',alignItems:'center',justifyContent:'center',marginTop:18,paddingHorizontal:18},primaryText:{color:'#fff',fontWeight:'900'},secondary:{minWidth:180,height:48,borderRadius:15,borderWidth:1,borderColor:'#d1d5db',alignItems:'center',justifyContent:'center',marginTop:9},secondaryText:{color:'#111827',fontWeight:'800'},quickRow:{alignItems:'flex-end',marginTop:20},ordersButton:{borderRadius:13,borderWidth:1,borderColor:'#ddd6fe',backgroundColor:'#f5f3ff',paddingHorizontal:14,paddingVertical:10},ordersText:{color:'#7c3aed',fontSize:12,fontWeight:'900'},filters:{flexDirection:'row',gap:8,marginTop:14},filter:{flex:1,borderRadius:999,borderWidth:1,borderColor:'#d1d5db',paddingVertical:9,alignItems:'center'},filterActive:{borderColor:'#7c3aed',backgroundColor:'#f3efff'},filterText:{color:'#6b7280',fontSize:11,fontWeight:'800'},filterTextActive:{color:'#7c3aed'},list:{marginTop:18,gap:14},card:{borderRadius:22,borderWidth:1,borderColor:'#e5e7eb',overflow:'hidden',backgroundColor:'#fff'},image:{width:'100%',height:140,backgroundColor:'#f3f4f6'},body:{padding:17},row:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:10},type:{color:'#7c3aed',fontSize:10,fontWeight:'900',textTransform:'uppercase',letterSpacing:1},badge:{borderRadius:999,backgroundColor:'#f3f4f6',paddingHorizontal:9,paddingVertical:6},validBadge:{backgroundColor:'#ecfdf5'},badgeText:{color:'#4b5563',fontSize:8,fontWeight:'900'},validText:{color:'#166534'},eventTitle:{color:'#111827',fontSize:21,fontWeight:'900',marginTop:10},meta:{color:'#6b7280',fontSize:12,lineHeight:18,marginTop:4},bottom:{marginTop:14,paddingTop:12,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:'#e5e7eb',flexDirection:'row',justifyContent:'space-between',alignItems:'center'},ticketNo:{color:'#111827',fontSize:11,fontWeight:'900'},orderNo:{color:'#6b7280',fontSize:9,marginTop:3},open:{color:'#7c3aed',fontSize:12,fontWeight:'900'}});
