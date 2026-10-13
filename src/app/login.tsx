@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +14,7 @@ type LoginResponse = {
 };
 
 export default function LoginScreen() {
+  const params = useLocalSearchParams<{ redirect?: string }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,6 +40,7 @@ export default function LoginScreen() {
           mode: 'login',
           challengeToken: data.challengeToken,
           maskedEmail: data.email,
+          ...(params.redirect ? { redirect: params.redirect } : {}),
         },
       });
     } catch (err) {
