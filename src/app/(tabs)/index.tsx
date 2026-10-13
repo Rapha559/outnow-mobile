@@ -27,8 +27,20 @@ type EventItem = {
   price: string;
 };
 
-function eventCoverUrl(eventId: string) {
-  return `${API_BASE}/api/mobile/events/${encodeURIComponent(eventId)}/cover`;
+function imageUrl(value?: string | null) {
+  const clean = String(value || '').trim();
+  if (!clean) return `${API_BASE}/images/event-placeholder.jpg`;
+
+  const secure = /^http:\/\//i.test(clean)
+    ? clean.replace(/^http:\/\//i, 'https://')
+    : clean;
+
+  if (/^https:\/\/res\.cloudinary\.com\//i.test(secure)) {
+    return `${API_BASE}/api/mobile/media/image?url=${encodeURIComponent(secure)}`;
+  }
+
+  if (/^https:\/\//i.test(secure)) return secure;
+  return `${API_BASE}${secure.startsWith('/') ? secure : `/${secure}`}`;
 }
 
 export default function HomeScreen() {
@@ -120,7 +132,7 @@ export default function HomeScreen() {
                   <Pressable key={event.id} style={styles.card} onPress={() => router.push(`/event/${event.id}`)}>
                     {!imageFailed ? (
                       <Image
-                        source={{ uri: eventCoverUrl(event.id) }}
+                        source={{ uri: imageUrl(event.image) }}
                         style={styles.cardImage}
                         resizeMode="cover"
                         onError={() => setFailedImages((current) => ({ ...current, [event.id]: true }))}
