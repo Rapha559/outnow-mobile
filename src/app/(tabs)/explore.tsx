@@ -17,16 +17,19 @@ type EventItem = {
   price: string;
 };
 
-function imageUrl(value: string) {
-  if (!value) return `${API_BASE}/images/event-placeholder.jpg`;
-  if (/^https?:\/\//i.test(value)) return value;
-  return `${API_BASE}${value.startsWith('/') ? value : `/${value}`}`;
+function imageUrl(value?: string | null) {
+  const clean = String(value || '').trim();
+  if (!clean) return `${API_BASE}/images/event-placeholder.jpg`;
+  if (/^http:\/\//i.test(clean)) return clean.replace(/^http:\/\//i, 'https://');
+  if (/^https:\/\//i.test(clean)) return clean;
+  return `${API_BASE}${clean.startsWith('/') ? clean : `/${clean}`}`;
 }
 
 export default function ExploreScreen() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetch(`${API_BASE}/api/events`)
@@ -70,18 +73,31 @@ export default function ExploreScreen() {
             <View style={styles.stateBox}><Text style={styles.stateTitle}>{query ? 'No results found' : 'No upcoming events are live yet'}</Text><Text style={styles.stateText}>{query ? 'Try a different search.' : 'Approved future events will appear here automatically.'}</Text></View>
           ) : (
             <View style={styles.list}>
-              {filtered.map((event) => (
-                <Pressable key={event.id} style={styles.row} onPress={() => router.push(`/event/${event.id}`)}>
-                  <Image source={{ uri: imageUrl(event.image) }} style={styles.image} contentFit="cover" />
-                  <View style={styles.rowBody}>
-                    <Text style={styles.category}>{event.category}</Text>
-                    <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
-                    <Text style={styles.meta} numberOfLines={1}>{event.date}</Text>
-                    <Text style={styles.meta} numberOfLines={1}>{event.venue || event.location}</Text>
-                  </View>
-                  <Text style={styles.price}>£{event.price}</Text>
-                </Pressable>
-              ))}
+              {filtered.map((event) => {
+                const failed = !!failedImages[event.id];
+                return (
+                  <Pressable key={event.id} style={styles.row} onPress={() => router.push(`/event/${event.id}`)}>
+                    {!failed ? (
+                      <Image
+                        source={{ uri: imageUrl(event.image) }}
+                        style={styles.image}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                        onError={() => setFailedImages((current) => ({ ...current, [event.id]: true }))}
+                      />
+                    ) : (
+                      <View style={styles.imageFallback}><Text style={styles.imageFallbackText}>O</Text></View>
+                    )}
+                    <View style={styles.rowBody}>
+                      <Text style={styles.category}>{event.category}</Text>
+                      <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
+                      <Text style={styles.meta} numberOfLines={1}>{event.date}</Text>
+                      <Text style={styles.meta} numberOfLines={1}>{event.venue || event.location}</Text>
+                    </View>
+                    <Text style={styles.price}>£{event.price}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
           )}
           <View style={{ height: 110 }} />
@@ -113,6 +129,8 @@ const styles = StyleSheet.create({
   list: { gap: 12 },
   row: { minHeight: 104, borderRadius: 18, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#ffffff', padding: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
   image: { width: 82, height: 82, borderRadius: 13, backgroundColor: '#f3f4f6' },
+  imageFallback: { width: 82, height: 82, borderRadius: 13, backgroundColor: '#ede9fe', alignItems: 'center', justifyContent: 'center' },
+  imageFallbackText: { color: '#7c3aed', fontSize: 30, fontWeight: '900' },
   rowBody: { flex: 1 },
   category: { color: '#7c3aed', fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 5 },
   eventTitle: { color: '#111827', fontSize: 16, lineHeight: 20, fontWeight: '800' },
