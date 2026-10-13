@@ -50,10 +50,7 @@ async function uploadAsset(
   const mimeType = asset.mimeType || (resourceType === 'video' ? 'video/mp4' : 'image/jpeg');
   const formData = new FormData();
 
-  formData.append(
-    'file',
-    { uri: asset.uri, name: fileName, type: mimeType } as unknown as Blob,
-  );
+  formData.append('file', { uri: asset.uri, name: fileName, type: mimeType } as unknown as Blob);
   formData.append('api_key', signature.apiKey);
   formData.append('timestamp', String(signature.timestamp));
   formData.append('signature', signature.signature);
@@ -81,9 +78,7 @@ async function uploadAsset(
 
 async function pickAndUploadImage(sessionToken: string, options: UploadOptions) {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    throw new Error(options.permissionError);
-  }
+  if (!permission.granted) throw new Error(options.permissionError);
 
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
@@ -112,18 +107,19 @@ export function pickAndUploadHeadlinerImage(sessionToken: string) {
   });
 }
 
+export function pickAndUploadBusinessLogo(sessionToken: string) {
+  return pickAndUploadImage(sessionToken, {
+    aspect: [1, 1],
+    filePrefix: 'outnow-business-logo',
+    permissionError: 'Photo library permission is required to choose a business logo.',
+  });
+}
+
 export async function pickAndUploadEventMedia(sessionToken: string) {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    throw new Error('Photo library permission is required to add event media.');
-  }
+  if (!permission.granted) throw new Error('Photo library permission is required to add event media.');
 
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ['images', 'videos'],
-    allowsEditing: false,
-    quality: 0.9,
-  });
-
+  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], allowsEditing: false, quality: 0.9 });
   if (result.canceled || !result.assets?.[0]) return null;
   const asset = result.assets[0];
   const resourceType: ResourceType = asset.type === 'video' ? 'video' : 'image';
