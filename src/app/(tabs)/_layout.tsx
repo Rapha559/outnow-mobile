@@ -21,6 +21,13 @@ export default function TabsLayout() {
           md={{ default: 'search', selected: 'search' }}
         />
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="saved">
+        <NativeTabs.Trigger.Label>Saved</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'heart', selected: 'heart.fill' }}
+          md={{ default: 'favorite_border', selected: 'favorite' }}
+        />
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="tickets">
         <NativeTabs.Trigger.Label>Tickets</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
