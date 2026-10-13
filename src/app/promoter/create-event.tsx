@@ -10,6 +10,7 @@ import { pickAndUploadEventImage, pickAndUploadHeadlinerImage } from '@/lib/even
 
 type Category = { id: string; name: string; slug: string };
 type TicketDraft = { id: string; name: string; description: string; price: string; quantity: string; maxPerOrder: string };
+type SettingsDefaults = { success: true; notifications: { defaultRefundPolicy: string; defaultTicketTaxTreatment: string } };
 const newTicket = (): TicketDraft => ({ id: `${Date.now()}-${Math.random()}`, name: '', description: '', price: '', quantity: '', maxPerOrder: '10' });
 
 export default function CreateEventScreen() {
@@ -41,12 +42,17 @@ export default function CreateEventScreen() {
 
   useEffect(() => {
     if (!sessionToken || user?.role !== 'PROMOTER') { setLoadingCategories(false); return; }
-    apiRequest<{ success: true; categories: Category[] }>('/api/mobile/promoter/events', {}, sessionToken)
-      .then((data) => {
-        setCategories(data.categories || []);
-        if (data.categories?.[0]) setCategory((current) => current || data.categories[0].slug);
+    Promise.all([
+      apiRequest<{ success: true; categories: Category[] }>('/api/mobile/promoter/events', {}, sessionToken),
+      apiRequest<SettingsDefaults>('/api/mobile/settings', {}, sessionToken).catch(() => null),
+    ])
+      .then(([eventData, settings]) => {
+        setCategories(eventData.categories || []);
+        if (eventData.categories?.[0]) setCategory((current) => current || eventData.categories[0].slug);
+        if (settings?.notifications?.defaultRefundPolicy) setRefundPolicy(settings.notifications.defaultRefundPolicy);
+        if (settings?.notifications?.defaultTicketTaxTreatment) setTicketTaxTreatment(settings.notifications.defaultTicketTaxTreatment);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : 'Unable to load categories.'))
+      .catch((err) => setError(err instanceof Error ? err.message : 'Unable to load event setup.'))
       .finally(() => setLoadingCategories(false));
   }, [sessionToken, user?.role]);
 
@@ -125,7 +131,7 @@ export default function CreateEventScreen() {
 
     <Section title="Cover image">{!!image&&<Image source={{uri:image}} style={styles.coverPreview} contentFit="cover"/>}<Pressable disabled={uploadingImage} style={styles.imageButton} onPress={() => void chooseImage()}>{uploadingImage?<ActivityIndicator color="#7c3aed"/>:<Text style={styles.imageButtonText}>{image?'Replace cover photo':'Choose cover photo from phone'}</Text>}</Pressable>{image?<Text style={styles.uploaded}>✓ Cover photo uploaded securely</Text>:<Text style={styles.helper}>JPG, PNG or WEBP, up to 10 MB.</Text>}</Section>
 
-    <Section title="Ticket settings"><Text style={styles.smallLabel}>Refund policy</Text><View style={styles.chips}>{[['NO_POLICY','Refunds until event'],['NO_REFUNDS','No refunds'],['24_HOURS','24h cutoff'],['48_HOURS','48h cutoff'],['72_HOURS','72h cutoff']].map(([value,label])=><Pressable key={value} onPress={()=>setRefundPolicy(value)} style={[styles.chip,refundPolicy===value&&styles.chipSelected]}><Text style={[styles.chipText,refundPolicy===value&&styles.chipTextSelected]}>{label}</Text></Pressable>)}</View><Text style={styles.smallLabel}>UK ticket VAT treatment</Text><View style={styles.chips}>{[['UK_STANDARD','Standard'],['UK_EXEMPT','Exempt']].map(([value,label])=><Pressable key={value} onPress={()=>setTicketTaxTreatment(value)} style={[styles.chip,ticketTaxTreatment===value&&styles.chipSelected]}><Text style={[styles.chipText,ticketTaxTreatment===value&&styles.chipTextSelected]}>{label}</Text></Pressable>)}</View></Section>
+    <Section title="Ticket settings"><Text style={styles.helper}>Your saved promoter defaults are applied automatically when this screen opens.</Text><Text style={styles.smallLabel}>Refund policy</Text><View style={styles.chips}>{[['NO_POLICY','Refunds until event'],['NO_REFUNDS','No refunds'],['24_HOURS','24h cutoff'],['48_HOURS','48h cutoff'],['72_HOURS','72h cutoff']].map(([value,label])=><Pressable key={value} onPress={()=>setRefundPolicy(value)} style={[styles.chip,refundPolicy===value&&styles.chipSelected]}><Text style={[styles.chipText,refundPolicy===value&&styles.chipTextSelected]}>{label}</Text></Pressable>)}</View><Text style={styles.smallLabel}>UK ticket VAT treatment</Text><View style={styles.chips}>{[['UK_STANDARD','Standard'],['UK_EXEMPT','Exempt']].map(([value,label])=><Pressable key={value} onPress={()=>setTicketTaxTreatment(value)} style={[styles.chip,ticketTaxTreatment===value&&styles.chipSelected]}><Text style={[styles.chipText,ticketTaxTreatment===value&&styles.chipTextSelected]}>{label}</Text></Pressable>)}</View></Section>
 
     <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Ticket types</Text><Pressable onPress={()=>setTickets((current)=>[...current,newTicket()])}><Text style={styles.addText}>＋ Add ticket</Text></Pressable></View>
     {tickets.map((ticket,index)=><View key={ticket.id} style={styles.ticketCard}><View style={styles.ticketHeader}><Text style={styles.ticketTitle}>Ticket {index+1}</Text>{tickets.length>1&&<Pressable onPress={()=>setTickets((current)=>current.filter((item)=>item.id!==ticket.id))}><Text style={styles.removeText}>Remove</Text></Pressable>}</View><Field label="Name *" value={ticket.name} onChangeText={(v)=>updateTicket(ticket.id,'name',v)} placeholder="General Admission"/><Field label="Description" value={ticket.description} onChangeText={(v)=>updateTicket(ticket.id,'description',v)} placeholder="Optional details"/><View style={styles.twoCol}><View style={styles.flex}><Field label="Price (£) *" value={ticket.price} onChangeText={(v)=>updateTicket(ticket.id,'price',v)} placeholder="20.00" keyboardType="decimal-pad"/></View><View style={styles.flex}><Field label="Quantity *" value={ticket.quantity} onChangeText={(v)=>updateTicket(ticket.id,'quantity',v)} placeholder="100" keyboardType="number-pad"/></View></View><Field label="Max per order" value={ticket.maxPerOrder} onChangeText={(v)=>updateTicket(ticket.id,'maxPerOrder',v)} placeholder="10" keyboardType="number-pad"/></View>)}
