@@ -18,18 +18,24 @@ type CloudinaryResponse = {
   error?: { message?: string };
 };
 
+type UploadOptions = {
+  aspect: [number, number];
+  filePrefix: string;
+  permissionError: string;
+};
+
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 
-export async function pickAndUploadEventImage(sessionToken: string) {
+async function pickAndUploadImage(sessionToken: string, options: UploadOptions) {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) {
-    throw new Error('Photo library permission is required to choose an event image.');
+    throw new Error(options.permissionError);
   }
 
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
     allowsEditing: true,
-    aspect: [16, 9],
+    aspect: options.aspect,
     quality: 0.9,
   });
 
@@ -46,7 +52,7 @@ export async function pickAndUploadEventImage(sessionToken: string) {
     sessionToken,
   );
 
-  const fileName = asset.fileName || `outnow-event-${Date.now()}.jpg`;
+  const fileName = asset.fileName || `${options.filePrefix}-${Date.now()}.jpg`;
   const mimeType = asset.mimeType || 'image/jpeg';
   const formData = new FormData();
 
@@ -72,11 +78,24 @@ export async function pickAndUploadEventImage(sessionToken: string) {
 
   return {
     url: data.secure_url,
-    // Use the final HTTPS Cloudinary URL for the preview as well. Some Android
-    // gallery providers return temporary content:// URIs that expo-image cannot
-    // reliably render after the picker closes.
     localUri: data.secure_url,
     width: asset.width,
     height: asset.height,
   };
+}
+
+export function pickAndUploadEventImage(sessionToken: string) {
+  return pickAndUploadImage(sessionToken, {
+    aspect: [16, 9],
+    filePrefix: 'outnow-event',
+    permissionError: 'Photo library permission is required to choose an event image.',
+  });
+}
+
+export function pickAndUploadHeadlinerImage(sessionToken: string) {
+  return pickAndUploadImage(sessionToken, {
+    aspect: [1, 1],
+    filePrefix: 'outnow-headliner',
+    permissionError: 'Photo library permission is required to choose a headliner image.',
+  });
 }
