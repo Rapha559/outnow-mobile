@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/auth-context';
 
-type MenuItem={label:string;subtitle:string;route?:'/promoter/dashboard'|'/promoter/events'|'/promoter/orders'|'/promoter/attendees'|'/promoter/payouts'|'/promoter/create-event'|'/login'|'/signup'|'/((tabs))/tickets'};
+type PromoterRoute='/promoter/dashboard'|'/promoter/events'|'/promoter/orders'|'/promoter/attendees'|'/promoter/payouts'|'/promoter/create-event';
+type MenuItem={label:string;subtitle:string;route:PromoterRoute};
 
 export default function ProfileScreen() {
   const { user, loading, isAuthenticated, signOut } = useAuth();
@@ -47,7 +48,7 @@ export default function ProfileScreen() {
               <Pressable style={styles.quickCard} onPress={()=>router.push('/promoter/attendees')}><Text style={styles.quickIcon}>✓</Text><Text style={styles.quickTitle}>Attendees</Text></Pressable>
               <Pressable style={styles.quickCard} onPress={()=>router.push('/promoter/payouts')}><Text style={styles.quickIcon}>£</Text><Text style={styles.quickTitle}>Payouts</Text></Pressable>
             </View>
-            <View style={styles.menu}>{promoterMenu.map(item=><Pressable key={item.label} style={styles.menuRow} onPress={()=>item.route&&router.push(item.route)}><View style={{flex:1}}><Text style={styles.menuText}>{item.label}</Text><Text style={styles.menuSub}>{item.subtitle}</Text></View><Text style={styles.chevron}>›</Text></Pressable>)}</View>
+            <View style={styles.menu}>{promoterMenu.map(item=><Pressable key={item.label} style={styles.menuRow} onPress={()=>router.push(item.route)}><View style={{flex:1}}><Text style={styles.menuText}>{item.label}</Text><Text style={styles.menuSub}>{item.subtitle}</Text></View><Text style={styles.chevron}>›</Text></Pressable>)}</View>
             <Pressable style={styles.signOutButton} onPress={()=>{void signOut();}}><Text style={styles.signOutText}>Sign out</Text></Pressable>
           </> : <>
             <Pressable style={styles.primaryButton} onPress={()=>router.push('/(tabs)/tickets')}><Text style={styles.primaryText}>View my tickets</Text></Pressable>
