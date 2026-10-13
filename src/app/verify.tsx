@@ -25,6 +25,7 @@ export default function VerifyScreen() {
     email?: string;
     maskedEmail?: string;
     challengeToken?: string;
+    redirect?: string;
   }>();
   const { saveSession } = useAuth();
   const [code, setCode] = useState('');
@@ -55,7 +56,11 @@ export default function VerifyScreen() {
       });
 
       await saveSession(data.sessionToken, data.user);
-      router.replace('/(tabs)/profile');
+      if (params.redirect?.startsWith('/event/')) {
+        router.replace(params.redirect as `/event/${string}`);
+      } else {
+        router.replace('/(tabs)/profile');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to verify your code.');
     } finally {
