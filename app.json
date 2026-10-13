@@ -51,6 +51,15 @@
         }
       ],
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow OutNow Tickets to use your camera to scan event ticket QR codes.",
+          "microphonePermission": "Allow OutNow Tickets to use your microphone.",
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#FFFFFF",
