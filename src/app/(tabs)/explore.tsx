@@ -1,7 +1,6 @@
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const API_BASE = 'https://www.outnowtickets.com';
@@ -84,8 +83,7 @@ export default function ExploreScreen() {
                       <Image
                         source={{ uri: imageUrl(event.image) }}
                         style={styles.image}
-                        contentFit="cover"
-                        cachePolicy="memory-disk"
+                        resizeMode="cover"
                         onError={() => setFailedImages((current) => ({ ...current, [event.id]: true }))}
                       />
                     ) : (
