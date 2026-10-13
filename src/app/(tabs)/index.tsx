@@ -1,8 +1,8 @@
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -134,9 +134,7 @@ export default function HomeScreen() {
                       <Image
                         source={{ uri: imageUrl(event.image) }}
                         style={styles.cardImage}
-                        contentFit="cover"
-                        transition={180}
-                        cachePolicy="memory-disk"
+                        resizeMode="cover"
                         onError={() => setFailedImages((current) => ({ ...current, [event.id]: true }))}
                       />
                     ) : (
