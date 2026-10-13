@@ -1,3 +1,5 @@
+import { publishSocialMutation } from '@/lib/social-sync';
+
 export const API_BASE = 'https://www.outnowtickets.com';
 
 export async function apiRequest<T>(
@@ -25,6 +27,18 @@ export async function apiRequest<T>(
 
   if (!response.ok) {
     throw new Error(data?.error || data?.message || 'Something went wrong. Please try again.');
+  }
+
+  if (path === '/api/mobile/social/discovery' && String(options.method || 'GET').toUpperCase() === 'POST') {
+    try {
+      const body = typeof options.body === 'string' ? JSON.parse(options.body) : null;
+      if (body?.action === 'like' && body.eventId && typeof data?.liked === 'boolean') {
+        publishSocialMutation({ type: 'like', eventId: String(body.eventId), liked: data.liked, likeCount: Number(data.likeCount || 0) });
+      }
+      if (body?.action === 'follow' && body.promoterId && typeof data?.following === 'boolean') {
+        publishSocialMutation({ type: 'follow', promoterId: String(body.promoterId), following: data.following, followers: Number(data.followers || 0) });
+      }
+    } catch {}
   }
 
   return data as T;
