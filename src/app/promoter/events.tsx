@@ -6,111 +6,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/auth-context';
 import { apiRequest } from '@/lib/api';
 
-type EventItem = {
-  id: string;
-  title: string;
-  date: string;
-  venue: string;
-  location: string;
-  status: string;
-  category: string;
-  capacity: number;
-  ticketsSold: number;
-  revenue: number;
-};
+type EventItem = { id:string; title:string; date:string; venue:string; location:string; status:string; category:string; capacity:number; ticketsSold:number; revenue:number };
+type DashboardResponse = { success:true; events:EventItem[] };
 
-type DashboardResponse = { success: true; events: EventItem[] };
-
-export default function PromoterEventsScreen() {
-  const { user, sessionToken } = useAuth();
-  const [events, setEvents] = useState<EventItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState('');
-
-  const load = useCallback(async (refresh = false) => {
-    if (!sessionToken || user?.role !== 'PROMOTER') return;
-    try {
-      refresh ? setRefreshing(true) : setLoading(true);
-      setError('');
-      const data = await apiRequest<DashboardResponse>('/api/mobile/promoter/dashboard', {}, sessionToken);
-      setEvents(data.events || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load events.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [sessionToken, user?.role]);
-
-  useEffect(() => { void load(); }, [load]);
-
-  return (
-    <View style={styles.screen}>
-      <SafeAreaView edges={['top']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor="#7c3aed" colors={['#7c3aed']} />}>
-          <View style={styles.topBar}>
-            <Pressable style={styles.back} onPress={() => router.back()}><Text style={styles.backText}>‹</Text></Pressable>
-            <Text style={styles.topTitle}>Events</Text>
-            <Pressable style={styles.add} onPress={() => router.push('/promoter/create-event')}><Text style={styles.addText}>＋</Text></Pressable>
-          </View>
-
-          <Text style={styles.eyebrow}>PROMOTER PORTAL</Text>
-          <Text style={styles.title}>Your Events</Text>
-          <Text style={styles.copy}>Track status, ticket sales and revenue for every event.</Text>
-
-          {loading ? (
-            <View style={styles.state}><ActivityIndicator size="large" color="#7c3aed" /></View>
-          ) : error ? (
-            <View style={styles.state}><Text style={styles.error}>{error}</Text></View>
-          ) : events.length === 0 ? (
-            <View style={styles.state}>
-              <Text style={styles.emptyTitle}>No events yet</Text>
-              <Text style={styles.emptyCopy}>Create your first event from the OutNow mobile app.</Text>
-              <Pressable style={styles.primary} onPress={() => router.push('/promoter/create-event')}><Text style={styles.primaryText}>Create event</Text></Pressable>
-            </View>
-          ) : (
-            <View style={styles.list}>{events.map((event) => (
-              <View key={event.id} style={styles.card}>
-                <Text style={styles.status}>{event.status.replace(/_/g, ' ')}</Text>
-                <Text style={styles.eventTitle}>{event.title}</Text>
-                <Text style={styles.meta}>{new Date(event.date).toLocaleDateString('en-GB')} · {event.venue}</Text>
-                <View style={styles.row}><Text style={styles.metric}>{event.ticketsSold}/{event.capacity} sold</Text><Text style={styles.revenue}>£{event.revenue.toFixed(2)}</Text></View>
-              </View>
-            ))}</View>
-          )}
-          <View style={{ height: 40 }} />
-        </ScrollView>
-      </SafeAreaView>
-    </View>
-  );
+export default function PromoterEventsScreen(){
+  const {user,sessionToken}=useAuth();const [events,setEvents]=useState<EventItem[]>([]);const [loading,setLoading]=useState(true);const [refreshing,setRefreshing]=useState(false);const [error,setError]=useState('');
+  const load=useCallback(async(refresh=false)=>{if(!sessionToken||user?.role!=='PROMOTER')return;try{refresh?setRefreshing(true):setLoading(true);setError('');const data=await apiRequest<DashboardResponse>('/api/mobile/promoter/dashboard',{},sessionToken);setEvents(data.events||[]);}catch(err){setError(err instanceof Error?err.message:'Unable to load events.');}finally{setLoading(false);setRefreshing(false);}},[sessionToken,user?.role]);
+  useEffect(()=>{void load();},[load]);
+  return <View style={styles.screen}><SafeAreaView edges={['top']} style={styles.safeArea}><ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={()=>void load(true)} tintColor="#7c3aed" colors={['#7c3aed']}/>}>
+    <View style={styles.topBar}><Pressable style={styles.back} onPress={()=>router.back()}><Text style={styles.backText}>‹</Text></Pressable><Text style={styles.topTitle}>Events</Text><Pressable style={styles.add} onPress={()=>router.push('/promoter/create-event')}><Text style={styles.addText}>＋</Text></Pressable></View>
+    <Text style={styles.eyebrow}>PROMOTER PORTAL</Text><Text style={styles.title}>Your Events</Text><Text style={styles.copy}>Track status, sales and revenue. Tap an event to manage or edit it.</Text>
+    {loading?<View style={styles.state}><ActivityIndicator size="large" color="#7c3aed"/></View>:error?<View style={styles.state}><Text style={styles.error}>{error}</Text></View>:events.length===0?<View style={styles.state}><Text style={styles.emptyTitle}>No events yet</Text><Text style={styles.emptyCopy}>Create your first event from the OutNow mobile app.</Text><Pressable style={styles.primary} onPress={()=>router.push('/promoter/create-event')}><Text style={styles.primaryText}>Create event</Text></Pressable></View>:<View style={styles.list}>{events.map(event=><Pressable key={event.id} style={styles.card} onPress={()=>router.push({pathname:'/promoter/event/[id]',params:{id:event.id}})}><View style={styles.titleRow}><View style={{flex:1}}><Text style={styles.status}>{event.status.replace(/_/g,' ')}</Text><Text style={styles.eventTitle}>{event.title}</Text><Text style={styles.meta}>{new Date(event.date).toLocaleDateString('en-GB')} · {event.venue}</Text></View><Text style={styles.chevron}>›</Text></View><View style={styles.row}><Text style={styles.metric}>{event.ticketsSold}/{event.capacity} sold</Text><Text style={styles.revenue}>£{event.revenue.toFixed(2)}</Text></View></Pressable>)}</View>}<View style={{height:40}}/>
+  </ScrollView></SafeAreaView></View>;
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#ffffff' },
-  safeArea: { flex: 1 },
-  content: { paddingHorizontal: 18 },
-  topBar: { height: 58, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  back: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#f9fafb', alignItems: 'center', justifyContent: 'center' },
-  backText: { color: '#111827', fontSize: 34, lineHeight: 36, marginTop: -3 },
-  topTitle: { color: '#111827', fontSize: 15, fontWeight: '800' },
-  add: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#7c3aed', alignItems: 'center', justifyContent: 'center' },
-  addText: { color: '#ffffff', fontSize: 24, fontWeight: '700', marginTop: -2 },
-  eyebrow: { color: '#7c3aed', fontSize: 11, fontWeight: '900', letterSpacing: 1.8, marginTop: 16 },
-  title: { color: '#111827', fontSize: 34, fontWeight: '900', marginTop: 8 },
-  copy: { color: '#6b7280', fontSize: 14, lineHeight: 21, marginTop: 8 },
-  state: { minHeight: 240, marginTop: 26, borderRadius: 20, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#fafafa', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  error: { color: '#dc2626', textAlign: 'center' },
-  emptyTitle: { color: '#111827', fontSize: 19, fontWeight: '900' },
-  emptyCopy: { color: '#6b7280', textAlign: 'center', marginTop: 7, lineHeight: 20 },
-  primary: { height: 48, borderRadius: 14, backgroundColor: '#7c3aed', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 22, marginTop: 18 },
-  primaryText: { color: '#ffffff', fontWeight: '900' },
-  list: { gap: 11, marginTop: 26 },
-  card: { borderRadius: 18, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#ffffff', padding: 16 },
-  status: { color: '#7c3aed', fontSize: 9, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase' },
-  eventTitle: { color: '#111827', fontSize: 18, fontWeight: '900', marginTop: 6 },
-  meta: { color: '#6b7280', fontSize: 12, marginTop: 6 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#e5e7eb', marginTop: 14, paddingTop: 12 },
-  metric: { color: '#6b7280', fontSize: 12, fontWeight: '700' },
-  revenue: { color: '#111827', fontSize: 13, fontWeight: '900' },
-});
+const styles=StyleSheet.create({screen:{flex:1,backgroundColor:'#fff'},safeArea:{flex:1},content:{paddingHorizontal:18},topBar:{height:58,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},back:{width:40,height:40,borderRadius:20,borderWidth:1,borderColor:'#e5e7eb',backgroundColor:'#f9fafb',alignItems:'center',justifyContent:'center'},backText:{color:'#111827',fontSize:34,lineHeight:36,marginTop:-3},topTitle:{color:'#111827',fontSize:15,fontWeight:'800'},add:{width:40,height:40,borderRadius:20,backgroundColor:'#7c3aed',alignItems:'center',justifyContent:'center'},addText:{color:'#fff',fontSize:24,fontWeight:'700',marginTop:-2},eyebrow:{color:'#7c3aed',fontSize:11,fontWeight:'900',letterSpacing:1.8,marginTop:16},title:{color:'#111827',fontSize:34,fontWeight:'900',marginTop:8},copy:{color:'#6b7280',fontSize:14,lineHeight:21,marginTop:8},state:{minHeight:240,marginTop:26,borderRadius:20,borderWidth:1,borderColor:'#e5e7eb',backgroundColor:'#fafafa',alignItems:'center',justifyContent:'center',padding:24},error:{color:'#dc2626',textAlign:'center'},emptyTitle:{color:'#111827',fontSize:19,fontWeight:'900'},emptyCopy:{color:'#6b7280',textAlign:'center',marginTop:7,lineHeight:20},primary:{height:48,borderRadius:14,backgroundColor:'#7c3aed',alignItems:'center',justifyContent:'center',paddingHorizontal:22,marginTop:18},primaryText:{color:'#fff',fontWeight:'900'},list:{gap:11,marginTop:26},card:{borderRadius:18,borderWidth:1,borderColor:'#e5e7eb',backgroundColor:'#fff',padding:16},titleRow:{flexDirection:'row',alignItems:'center'},status:{color:'#7c3aed',fontSize:9,fontWeight:'900',letterSpacing:1,textTransform:'uppercase'},eventTitle:{color:'#111827',fontSize:18,fontWeight:'900',marginTop:6},meta:{color:'#6b7280',fontSize:12,marginTop:6},chevron:{fontSize:30,color:'#9ca3af',marginLeft:8},row:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:'#e5e7eb',marginTop:14,paddingTop:12},metric:{color:'#6b7280',fontSize:12,fontWeight:'700'},revenue:{color:'#111827',fontSize:13,fontWeight:'900'}});
