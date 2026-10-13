@@ -72,7 +72,10 @@ export async function pickAndUploadEventImage(sessionToken: string) {
 
   return {
     url: data.secure_url,
-    localUri: asset.uri,
+    // Use the final HTTPS Cloudinary URL for the preview as well. Some Android
+    // gallery providers return temporary content:// URIs that expo-image cannot
+    // reliably render after the picker closes.
+    localUri: data.secure_url,
     width: asset.width,
     height: asset.height,
   };
