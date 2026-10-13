@@ -56,8 +56,10 @@ export default function VerifyScreen() {
       });
 
       await saveSession(data.sessionToken, data.user);
-      if (params.redirect?.startsWith('/event/')) {
+      if (params.redirect?.startsWith('/event/') && data.user.role === 'CUSTOMER') {
         router.replace(params.redirect as `/event/${string}`);
+      } else if (data.user.role === 'PROMOTER') {
+        router.replace('/promoter/dashboard');
       } else {
         router.replace('/(tabs)/profile');
       }
