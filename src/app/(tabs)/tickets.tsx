@@ -47,11 +47,7 @@ export default function TicketsScreen() {
     try {
       refresh ? setRefreshing(true) : setLoading(true);
       setError('');
-      const data = await apiRequest<{ success: true; tickets: MobileTicket[] }>(
-        '/api/mobile/tickets',
-        {},
-        sessionToken,
-      );
+      const data = await apiRequest<{ success: true; tickets: MobileTicket[] }>('/api/mobile/tickets', {}, sessionToken);
       setTickets(data.tickets || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load your tickets.');
@@ -67,15 +63,13 @@ export default function TicketsScreen() {
   }, [sessionToken]);
 
   if (authLoading) {
-    return <View style={styles.screen}><SafeAreaView style={styles.center}><ActivityIndicator size="large" color="#8b5cf6" /></SafeAreaView></View>;
+    return <View style={styles.screen}><SafeAreaView style={styles.center}><ActivityIndicator size="large" color="#7c3aed" /></SafeAreaView></View>;
   }
 
   return (
     <View style={styles.screen}>
       <SafeAreaView edges={['top']} style={styles.safeArea}>
-        <ScrollView
-          contentContainerStyle={styles.content}
-          refreshControl={isAuthenticated ? <RefreshControl refreshing={refreshing} onRefresh={() => void loadTickets(true)} tintColor="#fff" /> : undefined}>
+        <ScrollView contentContainerStyle={styles.content} refreshControl={isAuthenticated ? <RefreshControl refreshing={refreshing} onRefresh={() => void loadTickets(true)} tintColor="#7c3aed" colors={['#7c3aed']} /> : undefined}>
           <Text style={styles.eyebrow}>YOUR OUTNOW</Text>
           <Text style={styles.title}>My Tickets</Text>
           <Text style={styles.copy}>Your purchased tickets and live entry QR codes are stored here.</Text>
@@ -89,13 +83,9 @@ export default function TicketsScreen() {
               <Pressable style={styles.secondary} onPress={() => router.push('/signup')}><Text style={styles.secondaryText}>Create account</Text></Pressable>
             </View>
           ) : loading ? (
-            <View style={styles.stateCard}><ActivityIndicator size="large" color="#8b5cf6" /><Text style={styles.cardCopy}>Loading your tickets…</Text></View>
+            <View style={styles.stateCard}><ActivityIndicator size="large" color="#7c3aed" /><Text style={styles.cardCopy}>Loading your tickets…</Text></View>
           ) : error ? (
-            <View style={styles.stateCard}>
-              <Text style={styles.cardTitle}>Couldn't load tickets</Text>
-              <Text style={styles.cardCopy}>{error}</Text>
-              <Pressable style={styles.primary} onPress={() => void loadTickets()}><Text style={styles.primaryText}>Try again</Text></Pressable>
-            </View>
+            <View style={styles.stateCard}><Text style={styles.cardTitle}>Couldn't load tickets</Text><Text style={styles.cardCopy}>{error}</Text><Pressable style={styles.primary} onPress={() => void loadTickets()}><Text style={styles.primaryText}>Try again</Text></Pressable></View>
           ) : tickets.length === 0 ? (
             <View style={styles.stateCard}>
               <View style={styles.iconCircle}><Text style={styles.icon}>🎟</Text></View>
@@ -107,11 +97,8 @@ export default function TicketsScreen() {
             <View style={styles.ticketList}>
               {tickets.map((ticket) => {
                 const eventDate = new Date(ticket.event.date);
-                const dateText = Number.isNaN(eventDate.getTime())
-                  ? ticket.event.date
-                  : new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(eventDate);
+                const dateText = Number.isNaN(eventDate.getTime()) ? ticket.event.date : new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(eventDate);
                 const valid = ticket.status === 'VALID';
-
                 return (
                   <View key={ticket.id} style={styles.ticketCard}>
                     <Image source={{ uri: imageUrl(ticket.event.image) }} style={styles.eventImage} contentFit="cover" />
@@ -123,10 +110,7 @@ export default function TicketsScreen() {
                       <Text style={styles.eventTitle}>{ticket.event.title}</Text>
                       <Text style={styles.meta}>{dateText}</Text>
                       <Text style={styles.meta}>{ticket.event.venue} · {ticket.event.location}</Text>
-
-                      <View style={styles.qrWrap}>
-                        <Image source={{ uri: ticket.qrDataUrl }} style={styles.qrImage} contentFit="contain" />
-                      </View>
+                      <View style={styles.qrWrap}><Image source={{ uri: ticket.qrDataUrl }} style={styles.qrImage} contentFit="contain" /></View>
                       <Text style={styles.ticketNumber}>{ticket.ticketNumber}</Text>
                       <Text style={styles.orderNumber}>Order {ticket.order.orderNumber}</Text>
                       <Text style={styles.scanNote}>Show this QR code at the entrance. Do not share it publicly.</Text>
@@ -144,36 +128,36 @@ export default function TicketsScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#07070a' },
+  screen: { flex: 1, backgroundColor: '#ffffff' },
   safeArea: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content: { paddingHorizontal: 18, paddingTop: 16 },
-  eyebrow: { color: '#a78bfa', fontSize: 11, fontWeight: '900', letterSpacing: 1.8 },
-  title: { color: '#fff', fontSize: 34, lineHeight: 39, fontWeight: '900', marginTop: 10 },
-  copy: { color: '#92929d', fontSize: 15, lineHeight: 22, marginTop: 8, maxWidth: 360 },
-  stateCard: { marginTop: 30, minHeight: 260, borderRadius: 22, borderWidth: 1, borderColor: '#202028', backgroundColor: '#101014', alignItems: 'center', justifyContent: 'center', padding: 28 },
-  iconCircle: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#191522', alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+  eyebrow: { color: '#7c3aed', fontSize: 11, fontWeight: '900', letterSpacing: 1.8 },
+  title: { color: '#111827', fontSize: 34, lineHeight: 39, fontWeight: '900', marginTop: 10 },
+  copy: { color: '#6b7280', fontSize: 15, lineHeight: 22, marginTop: 8, maxWidth: 360 },
+  stateCard: { marginTop: 30, minHeight: 260, borderRadius: 22, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#fafafa', alignItems: 'center', justifyContent: 'center', padding: 28 },
+  iconCircle: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#f3efff', alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
   icon: { fontSize: 30 },
-  cardTitle: { color: '#fff', fontSize: 20, fontWeight: '900', textAlign: 'center' },
-  cardCopy: { color: '#8d8d98', textAlign: 'center', lineHeight: 21, marginTop: 10 },
+  cardTitle: { color: '#111827', fontSize: 20, fontWeight: '900', textAlign: 'center' },
+  cardCopy: { color: '#6b7280', textAlign: 'center', lineHeight: 21, marginTop: 10 },
   primary: { minWidth: 190, height: 50, borderRadius: 15, backgroundColor: '#7c3aed', alignItems: 'center', justifyContent: 'center', marginTop: 20, paddingHorizontal: 18 },
-  primaryText: { color: '#fff', fontWeight: '900' },
-  secondary: { minWidth: 190, height: 48, borderRadius: 15, borderWidth: 1, borderColor: '#2c2c36', alignItems: 'center', justifyContent: 'center', marginTop: 9 },
-  secondaryText: { color: '#fff', fontWeight: '800' },
+  primaryText: { color: '#ffffff', fontWeight: '900' },
+  secondary: { minWidth: 190, height: 48, borderRadius: 15, borderWidth: 1, borderColor: '#d1d5db', backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center', marginTop: 9 },
+  secondaryText: { color: '#111827', fontWeight: '800' },
   ticketList: { marginTop: 28, gap: 18 },
-  ticketCard: { borderRadius: 24, borderWidth: 1, borderColor: '#252530', backgroundColor: '#101014', overflow: 'hidden' },
-  eventImage: { width: '100%', height: 150, backgroundColor: '#17171d' },
+  ticketCard: { borderRadius: 24, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#ffffff', overflow: 'hidden' },
+  eventImage: { width: '100%', height: 150, backgroundColor: '#f3f4f6' },
   ticketBody: { padding: 18 },
   statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  typeLabel: { color: '#c4b5fd', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },
-  statusPill: { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 999, backgroundColor: '#143522' },
-  statusPillMuted: { backgroundColor: '#292930' },
-  statusText: { color: '#fff', fontSize: 9, fontWeight: '900' },
-  eventTitle: { color: '#fff', fontSize: 23, lineHeight: 28, fontWeight: '900', marginTop: 11 },
-  meta: { color: '#9696a1', fontSize: 12, lineHeight: 18, marginTop: 4 },
-  qrWrap: { alignSelf: 'center', backgroundColor: '#fff', borderRadius: 18, padding: 12, marginTop: 22 },
+  typeLabel: { color: '#7c3aed', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },
+  statusPill: { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 999, backgroundColor: '#dcfce7' },
+  statusPillMuted: { backgroundColor: '#f3f4f6' },
+  statusText: { color: '#166534', fontSize: 9, fontWeight: '900' },
+  eventTitle: { color: '#111827', fontSize: 23, lineHeight: 28, fontWeight: '900', marginTop: 11 },
+  meta: { color: '#6b7280', fontSize: 12, lineHeight: 18, marginTop: 4 },
+  qrWrap: { alignSelf: 'center', backgroundColor: '#ffffff', borderRadius: 18, padding: 12, marginTop: 22, borderWidth: 1, borderColor: '#e5e7eb' },
   qrImage: { width: 220, height: 220 },
-  ticketNumber: { color: '#fff', textAlign: 'center', fontSize: 13, fontWeight: '900', letterSpacing: 1, marginTop: 14 },
-  orderNumber: { color: '#777783', textAlign: 'center', fontSize: 10, marginTop: 4 },
-  scanNote: { color: '#7c7c87', textAlign: 'center', fontSize: 10, lineHeight: 15, marginTop: 12 },
+  ticketNumber: { color: '#111827', textAlign: 'center', fontSize: 13, fontWeight: '900', letterSpacing: 1, marginTop: 14 },
+  orderNumber: { color: '#6b7280', textAlign: 'center', fontSize: 10, marginTop: 4 },
+  scanNote: { color: '#6b7280', textAlign: 'center', fontSize: 10, lineHeight: 15, marginTop: 12 },
 });
