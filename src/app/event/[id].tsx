@@ -1,10 +1,12 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const API_BASE = 'https://www.outnowtickets.com';
+import { useAuth } from '@/context/auth-context';
+import { API_BASE, apiRequest } from '@/lib/api';
 
 type TicketType = {
   id: string;
@@ -28,6 +30,14 @@ type EventDetails = {
   ticketTypes: TicketType[];
 };
 
+type CheckoutResponse = {
+  success: true;
+  url: string;
+  orderId: string;
+  orderNumber: string;
+  reservationExpiresAt: string;
+};
+
 function imageUrl(value?: string | null) {
   if (!value) return `${API_BASE}/images/event-placeholder.jpg`;
   if (/^https?:\/\//i.test(value)) return value;
@@ -37,9 +47,13 @@ function imageUrl(value?: string | null) {
 export default function EventDetailsScreen() {
   const params = useLocalSearchParams<{ id: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const { isAuthenticated, sessionToken } = useAuth();
   const [event, setEvent] = useState<EventDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [checkoutError, setCheckoutError] = useState('');
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!id) return;
@@ -59,6 +73,18 @@ export default function EventDetailsScreen() {
     return Math.min(...event.ticketTypes.map((ticket) => ticket.price));
   }, [event]);
 
+  const selectedTickets = useMemo(() => {
+    if (!event) return [];
+    return event.ticketTypes
+      .map((ticket) => ({ ticket, quantity: quantities[ticket.id] || 0 }))
+      .filter((item) => item.quantity > 0);
+  }, [event, quantities]);
+
+  const subtotal = selectedTickets.reduce((total, item) => total + item.ticket.price * item.quantity, 0);
+  const bookingFee = subtotal * 0.05;
+  const estimatedTotal = subtotal + bookingFee;
+  const selectedCount = selectedTickets.reduce((total, item) => total + item.quantity, 0);
+
   const formattedDate = useMemo(() => {
     if (!event?.date) return '';
     const date = new Date(event.date);
@@ -72,6 +98,59 @@ export default function EventDetailsScreen() {
       minute: '2-digit',
     }).format(date);
   }, [event?.date]);
+
+  function changeQuantity(ticket: TicketType, delta: number) {
+    const remaining = Math.max(0, ticket.quantity - ticket.sold);
+    const max = Math.min(remaining, ticket.maxPerOrder || 10);
+    const current = quantities[ticket.id] || 0;
+    const next = Math.max(0, Math.min(max, current + delta));
+    setQuantities((previous) => ({ ...previous, [ticket.id]: next }));
+    setCheckoutError('');
+  }
+
+  async function checkout() {
+    if (!event) return;
+
+    if (!isAuthenticated || !sessionToken) {
+      router.push({ pathname: '/login', params: { redirect: `/event/${event.id}` } });
+      return;
+    }
+
+    if (selectedTickets.length === 0) {
+      setCheckoutError('Choose at least one ticket first.');
+      return;
+    }
+
+    try {
+      setCheckoutLoading(true);
+      setCheckoutError('');
+      const data = await apiRequest<CheckoutResponse>(
+        '/api/mobile/checkout',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            eventId: event.id,
+            tickets: selectedTickets.map((item) => ({
+              ticketTypeId: item.ticket.id,
+              quantity: item.quantity,
+            })),
+          }),
+        },
+        sessionToken,
+      );
+
+      await WebBrowser.openBrowserAsync(data.url, {
+        showTitle: true,
+        enableBarCollapsing: true,
+      });
+
+      router.replace('/(tabs)/tickets');
+    } catch (err) {
+      setCheckoutError(err instanceof Error ? err.message : 'Unable to start checkout.');
+    } finally {
+      setCheckoutLoading(false);
+    }
+  }
 
   return (
     <View style={styles.screen}>
@@ -106,7 +185,7 @@ export default function EventDetailsScreen() {
             </View>
 
             <View style={styles.headingRow}>
-              <Text style={styles.heading}>Tickets</Text>
+              <Text style={styles.heading}>Choose tickets</Text>
               {startingPrice !== null && <Text style={styles.startingPrice}>From £{startingPrice.toFixed(2)}</Text>}
             </View>
 
@@ -119,33 +198,64 @@ export default function EventDetailsScreen() {
               <View style={styles.ticketList}>
                 {event.ticketTypes.map((ticket) => {
                   const remaining = Math.max(0, ticket.quantity - ticket.sold);
+                  const quantity = quantities[ticket.id] || 0;
+                  const unavailable = !ticket.isActive || remaining <= 0;
+                  const max = Math.min(remaining, ticket.maxPerOrder || 10);
+
                   return (
                     <View key={ticket.id} style={styles.ticketCard}>
-                      <View style={styles.ticketBody}>
-                        <Text style={styles.ticketName}>{ticket.name}</Text>
-                        {!!ticket.description && <Text style={styles.ticketDescription}>{ticket.description}</Text>}
-                        <Text style={styles.remaining}>{remaining > 0 ? `${remaining} remaining` : 'Sold out'}</Text>
+                      <View style={styles.ticketTop}>
+                        <View style={styles.ticketBody}>
+                          <Text style={styles.ticketName}>{ticket.name}</Text>
+                          {!!ticket.description && <Text style={styles.ticketDescription}>{ticket.description}</Text>}
+                          <Text style={styles.remaining}>{remaining > 0 ? `${remaining} remaining` : 'Sold out'}</Text>
+                        </View>
+                        <Text style={styles.ticketPrice}>£{ticket.price.toFixed(2)}</Text>
                       </View>
-                      <Text style={styles.ticketPrice}>£{ticket.price.toFixed(2)}</Text>
+
+                      <View style={styles.quantityRow}>
+                        <Pressable disabled={quantity <= 0} style={[styles.quantityButton, quantity <= 0 && styles.quantityDisabled]} onPress={() => changeQuantity(ticket, -1)}>
+                          <Text style={styles.quantityButtonText}>−</Text>
+                        </Pressable>
+                        <View style={styles.quantityValue}><Text style={styles.quantityText}>{quantity}</Text></View>
+                        <Pressable disabled={unavailable || quantity >= max} style={[styles.quantityButton, (unavailable || quantity >= max) && styles.quantityDisabled]} onPress={() => changeQuantity(ticket, 1)}>
+                          <Text style={styles.quantityButtonText}>+</Text>
+                        </Pressable>
+                      </View>
                     </View>
                   );
                 })}
               </View>
             )}
 
+            {selectedCount > 0 && (
+              <View style={styles.summaryCard}>
+                <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Tickets ({selectedCount})</Text><Text style={styles.summaryValue}>£{subtotal.toFixed(2)}</Text></View>
+                <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Booking fee (5%)</Text><Text style={styles.summaryValue}>£{bookingFee.toFixed(2)}</Text></View>
+                <View style={[styles.summaryRow, styles.totalRow]}><Text style={styles.totalLabel}>Estimated total</Text><Text style={styles.totalValue}>£{estimatedTotal.toFixed(2)}</Text></View>
+              </View>
+            )}
+
+            {!!checkoutError && <Text style={styles.checkoutError}>{checkoutError}</Text>}
+
             <Pressable
-              disabled={!event.ticketTypes.some((ticket) => ticket.quantity - ticket.sold > 0)}
+              disabled={checkoutLoading || !event.ticketTypes.some((ticket) => ticket.quantity - ticket.sold > 0)}
+              onPress={() => void checkout()}
               style={({ pressed }) => [
                 styles.buyButton,
                 !event.ticketTypes.some((ticket) => ticket.quantity - ticket.sold > 0) && styles.buyButtonDisabled,
                 pressed && styles.pressed,
               ]}>
-              <Text style={styles.buyText}>
-                {event.ticketTypes.some((ticket) => ticket.quantity - ticket.sold > 0) ? 'Choose tickets' : 'Tickets unavailable'}
-              </Text>
+              {checkoutLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buyText}>
+                  {!isAuthenticated ? 'Sign in to checkout' : selectedCount > 0 ? `Pay £${estimatedTotal.toFixed(2)} with Stripe` : 'Choose tickets'}
+                </Text>
+              )}
             </Pressable>
 
-            <Text style={styles.note}>Secure checkout will use your existing OutNow payment flow.</Text>
+            <Text style={styles.note}>Stripe Checkout opens securely in your browser. Return to OutNow after payment to access your QR ticket.</Text>
             <View style={{ height: 40 }} />
           </ScrollView>
         )}
@@ -182,15 +292,30 @@ const styles = StyleSheet.create({
   emptyTitle: { color: '#fff', fontSize: 16, fontWeight: '800' },
   emptyCopy: { color: '#8e8e99', marginTop: 6, lineHeight: 19 },
   ticketList: { gap: 10 },
-  ticketCard: { minHeight: 86, borderRadius: 17, borderWidth: 1, borderColor: '#23232c', backgroundColor: '#101014', padding: 15, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  ticketCard: { borderRadius: 17, borderWidth: 1, borderColor: '#23232c', backgroundColor: '#101014', padding: 15 },
+  ticketTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   ticketBody: { flex: 1 },
   ticketName: { color: '#fff', fontSize: 16, fontWeight: '900' },
   ticketDescription: { color: '#8e8e99', fontSize: 12, marginTop: 4 },
   remaining: { color: '#a78bfa', fontSize: 10, fontWeight: '800', marginTop: 7 },
   ticketPrice: { color: '#fff', fontSize: 18, fontWeight: '900' },
-  buyButton: { height: 54, borderRadius: 16, backgroundColor: '#7c3aed', alignItems: 'center', justifyContent: 'center', marginTop: 22 },
+  quantityRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 14, gap: 8 },
+  quantityButton: { width: 38, height: 38, borderRadius: 12, borderWidth: 1, borderColor: '#393944', backgroundColor: '#17171d', alignItems: 'center', justifyContent: 'center' },
+  quantityDisabled: { opacity: 0.35 },
+  quantityButtonText: { color: '#fff', fontSize: 22, fontWeight: '700', lineHeight: 24 },
+  quantityValue: { minWidth: 44, height: 38, alignItems: 'center', justifyContent: 'center' },
+  quantityText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  summaryCard: { marginTop: 18, borderRadius: 18, borderWidth: 1, borderColor: '#2b2537', backgroundColor: '#121017', padding: 16, gap: 10 },
+  summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  summaryLabel: { color: '#9b9ba6', fontSize: 12 },
+  summaryValue: { color: '#d6d6dc', fontSize: 12, fontWeight: '800' },
+  totalRow: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#34303d', paddingTop: 12, marginTop: 2 },
+  totalLabel: { color: '#fff', fontSize: 14, fontWeight: '900' },
+  totalValue: { color: '#fff', fontSize: 20, fontWeight: '900' },
+  checkoutError: { color: '#fb7185', fontSize: 12, lineHeight: 18, marginTop: 14, textAlign: 'center' },
+  buyButton: { height: 56, borderRadius: 16, backgroundColor: '#7c3aed', alignItems: 'center', justifyContent: 'center', marginTop: 22 },
   buyButtonDisabled: { backgroundColor: '#24242b' },
   buyText: { color: '#fff', fontSize: 15, fontWeight: '900' },
   pressed: { opacity: 0.82 },
-  note: { color: '#72727e', fontSize: 11, textAlign: 'center', marginTop: 10 },
+  note: { color: '#72727e', fontSize: 11, lineHeight: 17, textAlign: 'center', marginTop: 10 },
 });
