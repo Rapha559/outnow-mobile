@@ -36,6 +36,21 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow OutNow Tickets to access your photos so you can choose event cover images.",
+          "cameraPermission": false,
+          "microphonePermission": false,
+          "colors": {
+            "cropToolbarColor": "#FFFFFF",
+            "cropToolbarIconColor": "#111827",
+            "cropToolbarActionTextColor": "#7C3AED",
+            "cropBackButtonIconColor": "#111827",
+            "cropBackgroundColor": "#FFFFFF"
+          }
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#FFFFFF",
