@@ -95,7 +95,7 @@ export default function VerifyScreen() {
             textContentType="oneTimeCode"
             maxLength={6}
             placeholder="000000"
-            placeholderTextColor="#4d4d58"
+            placeholderTextColor="#c4c7cf"
             style={styles.codeInput}
           />
 
@@ -113,23 +113,23 @@ export default function VerifyScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#07070a' },
+  screen: { flex: 1, backgroundColor: '#ffffff' },
   safeArea: { flex: 1 },
   content: { flex: 1, paddingHorizontal: 20 },
   topRow: { height: 58, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 42 },
-  back: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#292932', backgroundColor: '#15151b', alignItems: 'center', justifyContent: 'center' },
-  backText: { color: '#fff', fontSize: 34, lineHeight: 36, marginTop: -3 },
-  brand: { color: '#fff', fontWeight: '900', letterSpacing: 1.4, fontSize: 17 },
+  back: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#f9fafb', alignItems: 'center', justifyContent: 'center' },
+  backText: { color: '#111827', fontSize: 34, lineHeight: 36, marginTop: -3 },
+  brand: { color: '#111827', fontWeight: '900', letterSpacing: 1.4, fontSize: 17 },
   spacer: { width: 40 },
-  icon: { width: 62, height: 62, borderRadius: 31, backgroundColor: '#1b1624', borderWidth: 1, borderColor: '#3a2a51', alignItems: 'center', justifyContent: 'center', marginBottom: 26 },
+  icon: { width: 62, height: 62, borderRadius: 31, backgroundColor: '#f3efff', borderWidth: 1, borderColor: '#ddd6fe', alignItems: 'center', justifyContent: 'center', marginBottom: 26 },
   iconText: { fontSize: 26 },
-  eyebrow: { color: '#a78bfa', fontSize: 11, fontWeight: '900', letterSpacing: 1.8 },
-  title: { color: '#fff', fontSize: 34, lineHeight: 40, fontWeight: '900', marginTop: 10 },
-  copy: { color: '#92929d', fontSize: 15, lineHeight: 22, marginTop: 9 },
-  codeInput: { height: 68, borderRadius: 18, borderWidth: 1, borderColor: '#343440', backgroundColor: '#111116', color: '#fff', textAlign: 'center', fontSize: 30, fontWeight: '900', letterSpacing: 10, marginTop: 32, paddingLeft: 10 },
-  error: { color: '#fb7185', fontSize: 13, lineHeight: 19, marginTop: 14 },
+  eyebrow: { color: '#7c3aed', fontSize: 11, fontWeight: '900', letterSpacing: 1.8 },
+  title: { color: '#111827', fontSize: 34, lineHeight: 40, fontWeight: '900', marginTop: 10 },
+  copy: { color: '#6b7280', fontSize: 15, lineHeight: 22, marginTop: 9 },
+  codeInput: { height: 68, borderRadius: 18, borderWidth: 1, borderColor: '#d1d5db', backgroundColor: '#f9fafb', color: '#111827', textAlign: 'center', fontSize: 30, fontWeight: '900', letterSpacing: 10, marginTop: 32, paddingLeft: 10 },
+  error: { color: '#dc2626', fontSize: 13, lineHeight: 19, marginTop: 14 },
   primary: { height: 54, borderRadius: 16, backgroundColor: '#7c3aed', alignItems: 'center', justifyContent: 'center', marginTop: 22 },
   disabled: { opacity: 0.65 },
-  primaryText: { color: '#fff', fontSize: 15, fontWeight: '900' },
-  note: { color: '#6f6f7a', fontSize: 11, textAlign: 'center', lineHeight: 17, marginTop: 14, paddingHorizontal: 14 },
+  primaryText: { color: '#ffffff', fontSize: 15, fontWeight: '900' },
+  note: { color: '#6b7280', fontSize: 11, textAlign: 'center', lineHeight: 17, marginTop: 14, paddingHorizontal: 14 },
 });
