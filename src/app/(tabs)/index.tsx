@@ -27,10 +27,12 @@ type EventItem = {
   price: string;
 };
 
-function imageUrl(value: string) {
-  if (!value) return `${API_BASE}/images/event-placeholder.jpg`;
-  if (/^https?:\/\//i.test(value)) return value;
-  return `${API_BASE}${value.startsWith('/') ? value : `/${value}`}`;
+function imageUrl(value?: string | null) {
+  const clean = String(value || '').trim();
+  if (!clean) return `${API_BASE}/images/event-placeholder.jpg`;
+  if (/^http:\/\//i.test(clean)) return clean.replace(/^http:\/\//i, 'https://');
+  if (/^https:\/\//i.test(clean)) return clean;
+  return `${API_BASE}${clean.startsWith('/') ? clean : `/${clean}`}`;
 }
 
 export default function HomeScreen() {
@@ -39,6 +41,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
   async function loadEvents(showRefresh = false) {
     try {
@@ -114,19 +117,36 @@ export default function HomeScreen() {
             </View>
           ) : (
             <View style={styles.eventList}>
-              {filteredEvents.slice(0, 12).map((event) => (
-                <Pressable key={event.id} style={styles.card} onPress={() => router.push(`/event/${event.id}`)}>
-                  <Image source={{ uri: imageUrl(event.image) }} style={styles.cardImage} contentFit="cover" transition={180} />
-                  <View style={styles.cardOverlay} />
-                  <View style={styles.categoryPill}><Text style={styles.categoryText}>{event.category || 'Event'}</Text></View>
-                  <View style={styles.cardBody}>
-                    <Text style={styles.eventDate}>{event.date}</Text>
-                    <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
-                    <Text style={styles.eventLocation} numberOfLines={1}>{event.venue ? `${event.venue} · ` : ''}{event.location}</Text>
-                    <View style={styles.cardFooter}><Text style={styles.fromText}>FROM</Text><Text style={styles.price}>£{event.price}</Text></View>
-                  </View>
-                </Pressable>
-              ))}
+              {filteredEvents.slice(0, 12).map((event) => {
+                const imageFailed = !!failedImages[event.id];
+                return (
+                  <Pressable key={event.id} style={styles.card} onPress={() => router.push(`/event/${event.id}`)}>
+                    {!imageFailed ? (
+                      <Image
+                        source={{ uri: imageUrl(event.image) }}
+                        style={styles.cardImage}
+                        contentFit="cover"
+                        transition={180}
+                        cachePolicy="memory-disk"
+                        onError={() => setFailedImages((current) => ({ ...current, [event.id]: true }))}
+                      />
+                    ) : (
+                      <View style={styles.fallbackImage}>
+                        <Text style={styles.fallbackMark}>OUTNOW</Text>
+                        <Text style={styles.fallbackCopy}>Event cover unavailable</Text>
+                      </View>
+                    )}
+                    <View style={styles.cardOverlay} />
+                    <View style={styles.categoryPill}><Text style={styles.categoryText}>{event.category || 'Event'}</Text></View>
+                    <View style={styles.cardBody}>
+                      <Text style={styles.eventDate}>{event.date}</Text>
+                      <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
+                      <Text style={styles.eventLocation} numberOfLines={1}>{event.venue ? `${event.venue} · ` : ''}{event.location}</Text>
+                      <View style={styles.cardFooter}><Text style={styles.fromText}>FROM</Text><Text style={styles.price}>£{event.price}</Text></View>
+                    </View>
+                  </Pressable>
+                );
+              })}
             </View>
           )}
           <View style={styles.bottomSpacer} />
@@ -162,17 +182,20 @@ const styles = StyleSheet.create({
   retryButton: { marginTop: 7, backgroundColor: '#7c3aed', paddingHorizontal: 18, paddingVertical: 11, borderRadius: 12 },
   retryText: { color: '#ffffff', fontWeight: '800' },
   eventList: { gap: 16 },
-  card: { height: 310, borderRadius: 22, overflow: 'hidden', backgroundColor: '#f3f4f6', borderWidth: 1, borderColor: '#e5e7eb' },
+  card: { height: 310, borderRadius: 22, overflow: 'hidden', backgroundColor: '#111827', borderWidth: 1, borderColor: '#e5e7eb' },
   cardImage: { ...StyleSheet.absoluteFillObject },
-  cardOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.34)' },
-  categoryPill: { position: 'absolute', top: 14, left: 14, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.94)' },
+  fallbackImage: { ...StyleSheet.absoluteFillObject, backgroundColor: '#ede9fe', alignItems: 'center', justifyContent: 'center' },
+  fallbackMark: { color: '#7c3aed', fontSize: 28, fontWeight: '900', letterSpacing: 2 },
+  fallbackCopy: { color: '#6d28d9', fontSize: 12, fontWeight: '700', marginTop: 7 },
+  cardOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(17,24,39,0.28)' },
+  categoryPill: { position: 'absolute', top: 14, left: 14, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.96)' },
   categoryText: { color: '#7c3aed', fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.8 },
-  cardBody: { flex: 1, justifyContent: 'flex-end', padding: 18 },
-  eventDate: { color: '#ede9fe', fontSize: 12, fontWeight: '900', marginBottom: 7 },
+  cardBody: { marginTop: 'auto', padding: 18, paddingTop: 22, backgroundColor: 'rgba(17,24,39,0.84)' },
+  eventDate: { color: '#ddd6fe', fontSize: 12, fontWeight: '900', marginBottom: 7 },
   eventTitle: { color: '#ffffff', fontSize: 24, lineHeight: 28, fontWeight: '900' },
-  eventLocation: { color: '#f3f4f6', fontSize: 13, marginTop: 8 },
+  eventLocation: { color: '#e5e7eb', fontSize: 13, marginTop: 8 },
   cardFooter: { flexDirection: 'row', alignItems: 'baseline', marginTop: 16, gap: 6 },
-  fromText: { color: '#e5e7eb', fontSize: 9, fontWeight: '800', letterSpacing: 1.3 },
+  fromText: { color: '#d1d5db', fontSize: 9, fontWeight: '800', letterSpacing: 1.3 },
   price: { color: '#ffffff', fontSize: 19, fontWeight: '900' },
   bottomSpacer: { height: 110 },
 });
