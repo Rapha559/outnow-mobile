@@ -130,21 +130,22 @@ export default function HomeScreen() {
                 const imageFailed = !!failedImages[event.id];
                 return (
                   <Pressable key={event.id} style={styles.card} onPress={() => router.push(`/event/${event.id}`)}>
-                    {!imageFailed ? (
-                      <Image
-                        source={{ uri: imageUrl(event.image) }}
-                        style={styles.cardImage}
-                        resizeMode="cover"
-                        onError={() => setFailedImages((current) => ({ ...current, [event.id]: true }))}
-                      />
-                    ) : (
-                      <View style={styles.fallbackImage}>
-                        <Text style={styles.fallbackMark}>OUTNOW</Text>
-                        <Text style={styles.fallbackCopy}>Event cover unavailable</Text>
-                      </View>
-                    )}
-                    <View style={styles.imageFade} />
-                    <View style={styles.categoryPill}><Text style={styles.categoryText}>{event.category || 'Event'}</Text></View>
+                    <View style={styles.imageWrap}>
+                      {!imageFailed ? (
+                        <Image
+                          source={{ uri: imageUrl(event.image) }}
+                          style={styles.cardImage}
+                          resizeMode="cover"
+                          onError={() => setFailedImages((current) => ({ ...current, [event.id]: true }))}
+                        />
+                      ) : (
+                        <View style={styles.fallbackImage}>
+                          <Text style={styles.fallbackMark}>OUTNOW</Text>
+                          <Text style={styles.fallbackCopy}>Event cover unavailable</Text>
+                        </View>
+                      )}
+                      <View style={styles.categoryPill}><Text style={styles.categoryText}>{event.category || 'Event'}</Text></View>
+                    </View>
                     <View style={styles.cardBody}>
                       <Text style={styles.eventDate}>{event.date}</Text>
                       <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
@@ -189,15 +190,15 @@ const styles = StyleSheet.create({
   retryButton: { marginTop: 7, backgroundColor: '#7c3aed', paddingHorizontal: 18, paddingVertical: 11, borderRadius: 12 },
   retryText: { color: '#ffffff', fontWeight: '800' },
   eventList: { gap: 16 },
-  card: { height: 340, borderRadius: 22, overflow: 'hidden', backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e5e7eb', shadowColor: '#111827', shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 3 },
-  cardImage: { ...StyleSheet.absoluteFillObject, bottom: 145 },
-  fallbackImage: { ...StyleSheet.absoluteFillObject, bottom: 145, backgroundColor: '#f5f3ff', alignItems: 'center', justifyContent: 'center' },
+  card: { borderRadius: 22, overflow: 'hidden', backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e5e7eb', shadowColor: '#111827', shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 3 },
+  imageWrap: { position: 'relative', width: '100%', height: 195, backgroundColor: '#f5f3ff' },
+  cardImage: { width: '100%', height: 195, backgroundColor: '#f3f4f6' },
+  fallbackImage: { width: '100%', height: 195, backgroundColor: '#f5f3ff', alignItems: 'center', justifyContent: 'center' },
   fallbackMark: { color: '#7c3aed', fontSize: 28, fontWeight: '900', letterSpacing: 2 },
   fallbackCopy: { color: '#6d28d9', fontSize: 12, fontWeight: '700', marginTop: 7 },
-  imageFade: { position: 'absolute', left: 0, right: 0, top: 150, height: 45, backgroundColor: 'rgba(255,255,255,0.12)' },
   categoryPill: { position: 'absolute', top: 14, left: 14, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.96)', borderWidth: 1, borderColor: '#ede9fe' },
   categoryText: { color: '#7c3aed', fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.8 },
-  cardBody: { position: 'absolute', left: 0, right: 0, bottom: 0, minHeight: 145, padding: 18, backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+  cardBody: { padding: 18, backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: '#f3f4f6' },
   eventDate: { color: '#7c3aed', fontSize: 12, fontWeight: '900', marginBottom: 7 },
   eventTitle: { color: '#111827', fontSize: 22, lineHeight: 26, fontWeight: '900' },
   eventLocation: { color: '#6b7280', fontSize: 13, marginTop: 8 },
