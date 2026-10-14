@@ -60,9 +60,17 @@ export async function apiRequest<T>(
     if (existing) return existing as Promise<T>;
 
     const request = (async () => {
-      // Validate availability, sale windows, quantity limits, promo code and the
-      // authoritative 5% booking fee before creating an order or Stripe session.
-      await performRequest('/api/mobile/checkout/preview', options, sessionToken);
+      let checkoutBody: { waitlistOfferToken?: unknown } | null = null;
+      try {
+        checkoutBody = bodyText ? JSON.parse(bodyText) : null;
+      } catch {}
+
+      // Normal purchases are quoted against the server immediately before an
+      // order is created. Waitlist offers are intentionally exempt because a
+      // valid offer can reserve a ticket even when normal inventory is sold out.
+      if (!checkoutBody?.waitlistOfferToken) {
+        await performRequest('/api/mobile/checkout/preview', options, sessionToken);
+      }
       return performRequest<T>(path, options, sessionToken);
     })();
 
