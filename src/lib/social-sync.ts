@@ -10,7 +10,9 @@ export function publishSocialMutation(mutation: SocialMutation) {
   listeners.forEach((listener) => listener(mutation));
 }
 
-export function subscribeSocialMutations(listener: Listener) {
+export function subscribeSocialMutations(listener: Listener): () => void {
   listeners.add(listener);
-  return () => listeners.delete(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
