@@ -19,6 +19,11 @@ type SessionResponse = {
   };
 };
 
+function isSafeCustomerRedirect(value?: string) {
+  if (!value || !value.startsWith('/')) return false;
+  return value.startsWith('/event/') || value.startsWith('/tickets/transfer/accept');
+}
+
 export default function VerifyScreen() {
   const params = useLocalSearchParams<{
     mode?: string;
@@ -56,8 +61,8 @@ export default function VerifyScreen() {
       });
 
       await saveSession(data.sessionToken, data.user);
-      if (params.redirect?.startsWith('/event/') && data.user.role === 'CUSTOMER') {
-        router.replace(params.redirect as `/event/${string}`);
+      if (data.user.role === 'CUSTOMER' && isSafeCustomerRedirect(params.redirect)) {
+        router.replace(params.redirect as never);
       } else if (data.user.role === 'PROMOTER') {
         router.replace('/promoter/dashboard');
       } else {
