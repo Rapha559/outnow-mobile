@@ -3,11 +3,14 @@ import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
+import { useColorScheme } from 'react-native';
 
 import { AppErrorBoundary } from '@/components/app-error-boundary';
 import { AppLaunchIntro } from '@/components/app-launch-intro';
 import { AuthProvider } from '@/context/auth-context';
+import { installSystemThemePreprocessors, setSystemThemeScheme, systemThemeColors } from '@/lib/system-theme';
 
+installSystemThemePreprocessors();
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 Notifications.setNotificationHandler({
@@ -25,6 +28,9 @@ function NotificationObserver(){
 }
 
 export default function RootLayout(){
+  const colorScheme=useColorScheme();
+  const theme=systemThemeColors(colorScheme);
+  setSystemThemeScheme(colorScheme);
   const [showLaunchIntro,setShowLaunchIntro]=useState(true);
 
   useEffect(()=>{
@@ -37,8 +43,8 @@ export default function RootLayout(){
   },[]);
 
   return <AppErrorBoundary><AuthProvider>
-    <NotificationObserver/><StatusBar style={showLaunchIntro?'light':'dark'}/>
-    <Stack screenOptions={{headerShown:false,contentStyle:{backgroundColor:'#ffffff'}}}>
+    <NotificationObserver/><StatusBar style={showLaunchIntro?'light':theme.dark?'light':'dark'} backgroundColor={theme.background}/>
+    <Stack key={theme.dark?'dark':'light'} screenOptions={{headerShown:false,contentStyle:{backgroundColor:theme.background}}}>
       <Stack.Screen name="(tabs)"/><Stack.Screen name="event/[id]"/><Stack.Screen name="organiser/[id]"/><Stack.Screen name="ticket/[id]"/>
       <Stack.Screen name="tickets/transfer/accept"/>
       <Stack.Screen name="customer/orders"/><Stack.Screen name="customer/activity"/><Stack.Screen name="customer/checkout-result"/><Stack.Screen name="customer/reminders"/>
