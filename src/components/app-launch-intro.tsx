@@ -68,7 +68,7 @@ export function AppLaunchIntro({ onFinish }: Props) {
   }, [brandOpacity, brandTranslate, glowOpacity, logoOpacity, logoScale, onFinish, screenOpacity]);
 
   return (
-    <Animated.View style={[styles.screen, { opacity: screenOpacity }]}>
+    <Animated.View style={[StyleSheet.absoluteFill, styles.screen, { opacity: screenOpacity }]}>
       <View style={styles.logoStage}>
         <Animated.View style={[styles.glow, { opacity: glowOpacity }]} />
         <Animated.View
@@ -101,7 +101,6 @@ export function AppLaunchIntro({ onFinish }: Props) {
 
 const styles = StyleSheet.create({
   screen: {
-    ...StyleSheet.absoluteFillObject,
     zIndex: 9999,
     elevation: 9999,
     backgroundColor: '#050505',
