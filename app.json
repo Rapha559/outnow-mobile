@@ -68,7 +68,7 @@
         "recordAudioAndroid": false,
         "barcodeScannerEnabled": true
       }],
-      ["expo-splash-screen", { "backgroundColor": "#FFFFFF", "image": "./assets/images/splash-icon.png", "imageWidth": 76 }]
+      ["expo-splash-screen", { "backgroundColor": "#050505", "image": "./assets/images/logo-glow.png", "imageWidth": 190 }]
     ],
     "experiments": { "typedRoutes": true, "reactCompiler": true }
   }
