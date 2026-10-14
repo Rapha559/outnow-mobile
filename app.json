@@ -106,6 +106,12 @@
         }
       ],
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow OutNow Tickets to use your location to show events near you."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#050505",
