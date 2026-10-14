@@ -3,7 +3,7 @@ import { processColor, StyleSheet, type ColorSchemeName, type ColorValue } from 
 let currentScheme: ColorSchemeName = 'light';
 let installed = false;
 
-const darkMap: Record<string, string> = {
+const backgroundDarkMap: Record<string, string> = {
   '#fff': '#0b0b10',
   '#ffffff': '#0b0b10',
   'white': '#0b0b10',
@@ -20,20 +20,15 @@ const darkMap: Record<string, string> = {
   '#fff7ed': '#2b1d12',
   '#fef2f2': '#2b1518',
   '#fefce8': '#2a2613',
+};
+
+const textDarkMap: Record<string, string> = {
   '#111827': '#f9fafb',
   '#1f2937': '#f3f4f6',
   '#374151': '#e5e7eb',
   '#4b5563': '#d1d5db',
   '#6b7280': '#aeb4c2',
   '#9ca3af': '#818898',
-  '#d1d5db': '#34343f',
-  '#e5e7eb': '#282832',
-  '#e9d5ff': '#3a2c4e',
-  '#ddd6fe': '#3a3048',
-  '#fecaca': '#5a2d34',
-  '#bbf7d0': '#21472f',
-  '#fed7aa': '#563821',
-  '#fde68a': '#51451d',
   '#dc2626': '#f87171',
   '#b91c1c': '#f87171',
   '#166534': '#4ade80',
@@ -42,32 +37,51 @@ const darkMap: Record<string, string> = {
   '#92400e': '#fbbf24',
 };
 
-const colorProperties = [
-  'backgroundColor',
-  'color',
-  'borderColor',
-  'borderTopColor',
-  'borderRightColor',
-  'borderBottomColor',
-  'borderLeftColor',
-  'shadowColor',
-  'textDecorationColor',
-] as const;
+const borderDarkMap: Record<string, string> = {
+  '#d1d5db': '#34343f',
+  '#e5e7eb': '#282832',
+  '#e9d5ff': '#3a2c4e',
+  '#ddd6fe': '#3a3048',
+  '#fecaca': '#5a2d34',
+  '#bbf7d0': '#21472f',
+  '#fed7aa': '#563821',
+  '#fde68a': '#51451d',
+};
 
-function themedColor(value: unknown) {
-  let next = value;
-  if (currentScheme === 'dark' && typeof value === 'string') {
-    next = darkMap[value.toLowerCase()] ?? value;
-  }
-  return processColor(next as ColorValue);
+function processor(map: Record<string, string>) {
+  return (value: unknown) => {
+    let next = value;
+    if (currentScheme === 'dark' && typeof value === 'string') {
+      next = map[value.toLowerCase()] ?? value;
+    }
+    return processColor(next as ColorValue);
+  };
 }
+
+const processBackground = processor(backgroundDarkMap);
+const processText = processor(textDarkMap);
+const processBorder = processor(borderDarkMap);
+const processUnchangedColor = processor({});
 
 export function installSystemThemePreprocessors() {
   if (installed) return;
   installed = true;
-  for (const property of colorProperties) {
-    StyleSheet.setStyleAttributePreprocessor(property, themedColor);
+
+  StyleSheet.setStyleAttributePreprocessor('backgroundColor', processBackground);
+  StyleSheet.setStyleAttributePreprocessor('color', processText);
+  StyleSheet.setStyleAttributePreprocessor('textDecorationColor', processText);
+
+  for (const property of [
+    'borderColor',
+    'borderTopColor',
+    'borderRightColor',
+    'borderBottomColor',
+    'borderLeftColor',
+  ]) {
+    StyleSheet.setStyleAttributePreprocessor(property, processBorder);
   }
+
+  StyleSheet.setStyleAttributePreprocessor('shadowColor', processUnchangedColor);
 }
 
 export function setSystemThemeScheme(scheme: ColorSchemeName) {
