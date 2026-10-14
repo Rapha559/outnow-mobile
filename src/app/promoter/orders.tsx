@@ -35,7 +35,6 @@ export default function PromoterOrdersScreen(){
 
   const paidOrders=useMemo(()=>orders.filter(o=>['PAID','PARTIALLY_REFUNDED','REFUNDED'].includes(o.status)),[orders]);
   const paidTotal=useMemo(()=>paidOrders.reduce((sum,o)=>sum+o.total,0),[paidOrders]);
-  const ticketsSold=useMemo(()=>paidOrders.reduce((sum,o)=>sum+o.quantity,0),[paidOrders]);
   const pendingRefunds=useMemo(()=>orders.reduce((sum,o)=>sum+o.refunds.filter(r=>r.status==='PENDING').length,0),[orders]);
   const visibleOrders=useMemo(()=>{
     const q=query.trim().toLowerCase();
