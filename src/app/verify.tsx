@@ -19,6 +19,12 @@ type SessionResponse = {
   };
 };
 
+type StaffAccessResponse = {
+  success: true;
+  hasScannerAccess: boolean;
+  assignments: Array<{ id: string; role: 'SCANNER' }>;
+};
+
 function isSafeCustomerRedirect(value?: string) {
   if (!value || !value.startsWith('/')) return false;
   return value.startsWith('/event/') || value.startsWith('/tickets/transfer/accept');
@@ -61,13 +67,35 @@ export default function VerifyScreen() {
       });
 
       await saveSession(data.sessionToken, data.user);
+
       if (data.user.role === 'CUSTOMER' && isSafeCustomerRedirect(params.redirect)) {
         router.replace(params.redirect as never);
-      } else if (data.user.role === 'PROMOTER') {
-        router.replace('/promoter/dashboard');
-      } else {
-        router.replace('/(tabs)/profile');
+        return;
       }
+
+      if (data.user.role === 'PROMOTER') {
+        router.replace('/promoter/dashboard');
+        return;
+      }
+
+      if (data.user.role === 'CUSTOMER') {
+        try {
+          const staffAccess = await apiRequest<StaffAccessResponse>(
+            '/api/mobile/staff/access',
+            {},
+            data.sessionToken,
+          );
+
+          if (staffAccess.hasScannerAccess && staffAccess.assignments.length > 0) {
+            router.replace('/staff');
+            return;
+          }
+        } catch {
+          // Scanner access should never block a successful customer sign-in.
+        }
+      }
+
+      router.replace('/(tabs)/profile');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to verify your code.');
     } finally {
