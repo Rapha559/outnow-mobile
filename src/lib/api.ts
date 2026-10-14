@@ -2,7 +2,9 @@ import { publishSocialMutation } from '@/lib/social-sync';
 
 export const API_BASE = 'https://www.outnowtickets.com';
 
-export async function apiRequest<T>(
+const inFlightCheckoutRequests = new Map<string, Promise<unknown>>();
+
+async function performRequest<T>(
   path: string,
   options: RequestInit = {},
   sessionToken?: string | null,
@@ -42,4 +44,35 @@ export async function apiRequest<T>(
   }
 
   return data as T;
+}
+
+export async function apiRequest<T>(
+  path: string,
+  options: RequestInit = {},
+  sessionToken?: string | null,
+): Promise<T> {
+  const method = String(options.method || 'GET').toUpperCase();
+
+  if (path === '/api/mobile/checkout' && method === 'POST') {
+    const bodyText = typeof options.body === 'string' ? options.body : '';
+    const key = `${sessionToken || 'anonymous'}:${bodyText}`;
+    const existing = inFlightCheckoutRequests.get(key);
+    if (existing) return existing as Promise<T>;
+
+    const request = (async () => {
+      // Validate availability, sale windows, quantity limits, promo code and the
+      // authoritative 5% booking fee before creating an order or Stripe session.
+      await performRequest('/api/mobile/checkout/preview', options, sessionToken);
+      return performRequest<T>(path, options, sessionToken);
+    })();
+
+    inFlightCheckoutRequests.set(key, request);
+    try {
+      return await request;
+    } finally {
+      inFlightCheckoutRequests.delete(key);
+    }
+  }
+
+  return performRequest<T>(path, options, sessionToken);
 }
