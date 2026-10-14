@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { getUserLocation } from '@/lib/user-location';
+
 const API_BASE = 'https://www.outnowtickets.com';
 
 type DateFilter = 'ANY' | 'TODAY' | 'WEEKEND' | '7_DAYS' | '30_DAYS';
@@ -80,6 +82,8 @@ export default function ExploreScreen() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [query, setQuery] = useState('');
   const [locationQuery, setLocationQuery] = useState('');
+  const [detectedLocation, setDetectedLocation] = useState('');
+  const [locationLoading, setLocationLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [dateFilter, setDateFilter] = useState<DateFilter>('ANY');
   const [sortMode, setSortMode] = useState<SortMode>('SOONEST');
@@ -93,6 +97,21 @@ export default function ExploreScreen() {
       .catch(() => setEvents([]))
       .finally(() => setLoading(false));
   }, []);
+
+  async function useCurrentLocation(requestPermission = true) {
+    try {
+      setLocationLoading(true);
+      const location = await getUserLocation(requestPermission);
+      if (!location) return;
+      const value = location.city || location.district || location.region || '';
+      setDetectedLocation(location.label);
+      if (value) setLocationQuery((current) => current.trim() ? current : value);
+    } finally {
+      setLocationLoading(false);
+    }
+  }
+
+  useEffect(() => { void useCurrentLocation(true); }, []);
 
   const categories = useMemo(() => Array.from(new Set(events.map((event) => event.category).filter(Boolean))).sort(), [events]);
 
@@ -149,7 +168,11 @@ export default function ExploreScreen() {
           <View style={styles.locationWrap}>
             <Text style={styles.locationIcon}>⌖</Text>
             <TextInput value={locationQuery} onChangeText={setLocationQuery} placeholder="City or venue" placeholderTextColor="#9ca3af" style={styles.searchInput} autoCapitalize="words" />
+            <Pressable disabled={locationLoading} style={styles.locationButton} onPress={() => void useCurrentLocation(true)}>
+              {locationLoading ? <ActivityIndicator size="small" color="#7c3aed" /> : <Text style={styles.locationButtonText}>Near me</Text>}
+            </Pressable>
           </View>
+          {!!detectedLocation && <Text style={styles.locationHint}>Using your current area: {detectedLocation}</Text>}
 
           {featured.length > 0 && !query && !activeFilters && (
             <View style={styles.featuredSection}>
@@ -189,7 +212,7 @@ export default function ExploreScreen() {
             {([['SOONEST','Soonest'],['TRENDING','Trending'],['PRICE_LOW','Lowest price']] as Array<[SortMode,string]>).map(([value,label]) => <Pressable key={value} style={[styles.sortButton, sortMode === value && styles.sortButtonSelected]} onPress={() => setSortMode(value)}><Text style={[styles.sortText, sortMode === value && styles.sortTextSelected]}>{label}</Text></Pressable>)}
           </View>
 
-          <View style={styles.headingRow}><Text style={styles.heading}>{query || activeFilters ? 'Matching events' : 'All upcoming events'}</Text><Text style={styles.count}>{filtered.length}</Text></View>
+          <View style={styles.headingRow}><Text style={styles.heading}>{locationQuery.trim() ? `Events in ${locationQuery.trim()}` : query || activeFilters ? 'Matching events' : 'All upcoming events'}</Text><Text style={styles.count}>{filtered.length}</Text></View>
 
           {loading ? (
             <View style={styles.stateBox}><ActivityIndicator color="#7c3aed" size="large" /></View>
@@ -228,7 +251,7 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#ffffff' }, safeArea: { flex: 1 }, content: { paddingHorizontal: 18, paddingTop: 16 },
   eyebrow: { color: '#7c3aed', fontSize: 11, fontWeight: '900', letterSpacing: 1.8 }, title: { color: '#111827', fontSize: 34, lineHeight: 39, fontWeight: '900', marginTop: 10 }, copy: { color: '#6b7280', fontSize: 15, lineHeight: 22, marginTop: 8 },
-  searchWrap: { flexDirection: 'row', alignItems: 'center', height: 56, borderRadius: 17, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#f9fafb', paddingHorizontal: 15, marginTop: 24 }, locationWrap: { flexDirection: 'row', alignItems: 'center', height: 50, borderRadius: 15, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#fff', paddingHorizontal: 15, marginTop: 10 }, searchIcon: { color: '#6b7280', fontSize: 25, marginRight: 8, marginTop: -3 }, locationIcon: { color: '#7c3aed', fontSize: 19, marginRight: 9 }, searchInput: { flex: 1, color: '#111827', fontSize: 15 },
+  searchWrap: { flexDirection: 'row', alignItems: 'center', height: 56, borderRadius: 17, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#f9fafb', paddingHorizontal: 15, marginTop: 24 }, locationWrap: { flexDirection: 'row', alignItems: 'center', minHeight: 50, borderRadius: 15, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#fff', paddingLeft: 15, paddingRight: 6, marginTop: 10 }, searchIcon: { color: '#6b7280', fontSize: 25, marginRight: 8, marginTop: -3 }, locationIcon: { color: '#7c3aed', fontSize: 19, marginRight: 9 }, searchInput: { flex: 1, color: '#111827', fontSize: 15 }, locationButton:{minWidth:68,height:38,borderRadius:11,backgroundColor:'#f5f3ff',borderWidth:1,borderColor:'#ddd6fe',alignItems:'center',justifyContent:'center',paddingHorizontal:9},locationButtonText:{color:'#7c3aed',fontSize:10,fontWeight:'900'},locationHint:{color:'#7c3aed',fontSize:11,fontWeight:'700',marginTop:7,marginLeft:3},
   featuredSection: { marginTop: 24 }, featuredList: { gap: 12, paddingRight: 18 }, featuredCard: { width: 250, borderRadius: 20, overflow: 'hidden', backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb' }, featuredImage: { width: '100%', height: 132, backgroundColor: '#f3f4f6' }, featuredBody: { padding: 13 }, featuredCategory: { color: '#7c3aed', fontSize: 9, fontWeight: '900', textTransform: 'uppercase' }, featuredTitle: { color: '#111827', fontSize: 17, lineHeight: 21, fontWeight: '900', marginTop: 5 }, featuredMeta: { color: '#6b7280', fontSize: 11, marginTop: 6 }, featuredPrice: { color: '#111827', fontWeight: '900', marginTop: 8 }, trendingMark: { fontSize: 18 },
   filterLabel: { color: '#374151', fontSize: 12, fontWeight: '900', marginTop: 18, marginBottom: 3 }, chips: { gap: 9, paddingVertical: 10 }, chipsCompact: { gap: 9, paddingVertical: 10 }, chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb' }, chipSelected: { backgroundColor: '#f5f3ff', borderColor: '#7c3aed' }, chipText: { color: '#4b5563', fontWeight: '700', fontSize: 12 }, chipTextSelected: { color: '#6d28d9' },
   sortRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, clearText: { color: '#7c3aed', fontSize: 12, fontWeight: '800', marginTop: 18 }, sortButtons: { flexDirection: 'row', gap: 8, marginTop: 7, marginBottom: 18 }, sortButton: { flex: 1, minHeight: 40, borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#f9fafb', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7 }, sortButtonSelected: { backgroundColor: '#7c3aed', borderColor: '#7c3aed' }, sortText: { color: '#4b5563', fontSize: 11, fontWeight: '800' }, sortTextSelected: { color: '#fff' },
