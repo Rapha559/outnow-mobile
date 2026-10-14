@@ -1,13 +1,17 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { useColorScheme } from 'react-native';
+
+import { systemThemeColors } from '@/lib/system-theme';
 
 export default function TabsLayout() {
+  const theme=systemThemeColors(useColorScheme());
   return (
     <NativeTabs
-      backgroundColor="#ffffff"
+      backgroundColor={theme.background}
       tintColor="#7c3aed"
-      iconColor={{ default: '#6b7280', selected: '#7c3aed' }}
+      iconColor={{ default: theme.muted, selected: '#7c3aed' }}
       labelStyle={{
-        default: { color: '#6b7280' },
+        default: { color: theme.muted },
         selected: { color: '#7c3aed', fontWeight: '700' },
       }}>
       <NativeTabs.Trigger name="index">
