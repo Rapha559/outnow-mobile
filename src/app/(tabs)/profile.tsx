@@ -153,10 +153,6 @@ export default function ProfileScreen() {
 }
 
 function GuestProfile() {
-  const openProtected = (target: string) => {
-    router.push({ pathname: '/login', params: { redirect: target } });
-  };
-
   return (
     <>
       <View style={styles.guestHero}>
@@ -187,31 +183,6 @@ function GuestProfile() {
         </Pressable>
         <Text style={styles.authHint}>Google and Apple sign-in are available on the next screen.</Text>
       </View>
-
-      <Text style={styles.sectionEyebrow}>WHY JOIN OUTNOW?</Text>
-      <View style={styles.benefits}>
-        <BenefitCard icon="🎟" title="Instant tickets" copy="Keep your QR tickets ready for entry." />
-        <BenefitCard icon="♥" title="Save events" copy="Build your own list of events you love." />
-        <BenefitCard icon="🔔" title="Event reminders" copy="Get useful updates before your event." />
-        <BenefitCard icon="⇄" title="Secure transfers" copy="Send eligible tickets safely to another person." />
-      </View>
-
-      <Text style={styles.sectionEyebrow}>EXPLORE YOUR ACCOUNT</Text>
-      <View style={styles.lockedMenu}>
-        <LockedRow icon="🎟" title="My Tickets" subtitle="QR codes and event passes" onPress={() => openProtected('/(tabs)/tickets')} />
-        <LockedRow icon="♥" title="Saved Events" subtitle="Events you want to come back to" onPress={() => openProtected('/(tabs)/saved')} />
-        <LockedRow icon="▣" title="Order History" subtitle="Purchases and refund progress" onPress={() => openProtected('/customer/orders')} />
-        <LockedRow icon="⇄" title="Transfers" subtitle="Send and receive eligible tickets" onPress={() => openProtected('/customer/activity')} />
-      </View>
-
-      <Pressable style={({ pressed }) => [styles.helpCard, pressed && styles.pressed]} onPress={() => void WebBrowser.openBrowserAsync(`${SITE}/help`)}>
-        <View style={styles.helpIcon}><Text style={styles.helpIconText}>?</Text></View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.helpTitle}>Need help?</Text>
-          <Text style={styles.helpCopy}>Visit the OutNow support centre.</Text>
-        </View>
-        <Text style={styles.chevron}>›</Text>
-      </Pressable>
     </>
   );
 }
@@ -240,21 +211,6 @@ function PreviewStat({ value, label }: { value: string; label: string }) {
   return <View style={styles.previewStat}><Text style={styles.previewValue}>{value}</Text><Text style={styles.previewLabel}>{label}</Text></View>;
 }
 
-function BenefitCard({ icon, title, copy }: { icon: string; title: string; copy: string }) {
-  return <View style={styles.benefitCard}><View style={styles.benefitIcon}><Text style={styles.benefitIconText}>{icon}</Text></View><Text style={styles.benefitTitle}>{title}</Text><Text style={styles.benefitCopy}>{copy}</Text></View>;
-}
-
-function LockedRow({ icon, title, subtitle, onPress }: { icon: string; title: string; subtitle: string; onPress: () => void }) {
-  return (
-    <Pressable style={({ pressed }) => [styles.lockedRow, pressed && styles.rowPressed]} onPress={onPress}>
-      <View style={styles.lockIcon}><Text style={styles.lockIconText}>{icon}</Text></View>
-      <View style={{ flex: 1 }}><Text style={styles.lockedTitle}>{title}</Text><Text style={styles.lockedSubtitle}>{subtitle}</Text></View>
-      <View style={styles.lockBadge}><Text style={styles.lockBadgeText}>SIGN IN</Text></View>
-      <Text style={styles.chevron}>›</Text>
-    </Pressable>
-  );
-}
-
 function Quick({ icon, label, subtitle, onPress }: { icon: string; label: string; subtitle: string; onPress: () => void }) {
   return (
     <Pressable style={({ pressed }) => [styles.quick, pressed && styles.quickPressed]} onPress={onPress}>
@@ -279,9 +235,7 @@ const styles = StyleSheet.create({
   header:{flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:18},eyebrow:{color:'#7c3aed',fontSize:11,fontWeight:'900',letterSpacing:2.1},title:{color:'#111827',fontSize:39,lineHeight:44,fontWeight:'900',marginTop:9},copy:{color:'#6b7280',fontSize:15,lineHeight:22,marginTop:8,maxWidth:320},headerMark:{width:44,height:44,borderRadius:22,backgroundColor:'#f3efff',borderWidth:1,borderColor:'#ddd6fe',alignItems:'center',justifyContent:'center',marginTop:4},headerMarkText:{color:'#7c3aed',fontSize:18,fontWeight:'900'},
   guestHero:{marginTop:26,borderRadius:28,backgroundColor:'#111827',padding:22,minHeight:255,overflow:'hidden'},heroGlowOne:{position:'absolute',width:190,height:190,borderRadius:95,backgroundColor:'#7c3aed',opacity:.32,right:-65,top:-70},heroGlowTwo:{position:'absolute',width:140,height:140,borderRadius:70,backgroundColor:'#a78bfa',opacity:.13,left:-40,bottom:-70},guestTop:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},guestAvatar:{width:58,height:58,borderRadius:29,backgroundColor:'#fff',alignItems:'center',justifyContent:'center'},guestAvatarText:{color:'#7c3aed',fontSize:21,fontWeight:'900'},guestBadge:{borderRadius:999,backgroundColor:'rgba(255,255,255,0.12)',borderWidth:1,borderColor:'rgba(255,255,255,0.18)',paddingHorizontal:11,paddingVertical:7},guestBadgeText:{color:'#ddd6fe',fontSize:9,fontWeight:'900',letterSpacing:1.1},guestTitle:{color:'#fff',fontSize:26,fontWeight:'900',marginTop:22},guestCopy:{color:'#d1d5db',fontSize:13,lineHeight:20,marginTop:7,maxWidth:310},previewStats:{marginTop:20,borderRadius:18,backgroundColor:'rgba(255,255,255,0.08)',paddingVertical:14,flexDirection:'row',alignItems:'center'},previewStat:{flex:1,alignItems:'center'},previewValue:{color:'#fff',fontSize:19,fontWeight:'900'},previewLabel:{color:'#c4b5fd',fontSize:10,fontWeight:'800',marginTop:3},statDivider:{width:1,height:28,backgroundColor:'rgba(255,255,255,0.16)'},
   authSection:{marginTop:18},primary:{minHeight:56,borderRadius:18,backgroundColor:'#7c3aed',flexDirection:'row',alignItems:'center',justifyContent:'center',paddingHorizontal:18},primaryPressed:{transform:[{scale:.985}],opacity:.92},primaryIcon:{position:'absolute',left:12,width:34,height:34,borderRadius:17,backgroundColor:'rgba(255,255,255,0.16)',alignItems:'center',justifyContent:'center'},primaryIconText:{color:'#fff',fontSize:18,fontWeight:'900'},primaryText:{color:'#fff',fontSize:15,fontWeight:'900'},secondary:{minHeight:54,borderRadius:18,borderWidth:1,borderColor:'#d1d5db',backgroundColor:'#fff',alignItems:'center',justifyContent:'center',marginTop:10},secondaryText:{color:'#111827',fontSize:15,fontWeight:'900'},authHint:{color:'#9ca3af',fontSize:10,textAlign:'center',marginTop:10},
-  sectionEyebrow:{color:'#6b7280',fontSize:10,fontWeight:'900',letterSpacing:1.5,marginTop:30,marginBottom:12},benefits:{flexDirection:'row',flexWrap:'wrap',gap:10},benefitCard:{width:'48.5%',minHeight:145,borderRadius:20,borderWidth:1,borderColor:'#e5e7eb',backgroundColor:'#fff',padding:15},benefitIcon:{width:38,height:38,borderRadius:12,backgroundColor:'#f5f3ff',alignItems:'center',justifyContent:'center'},benefitIconText:{fontSize:18},benefitTitle:{color:'#111827',fontSize:14,fontWeight:'900',marginTop:13},benefitCopy:{color:'#6b7280',fontSize:11,lineHeight:16,marginTop:5},
-  lockedMenu:{borderRadius:22,borderWidth:1,borderColor:'#e5e7eb',overflow:'hidden',backgroundColor:'#fff'},lockedRow:{minHeight:75,flexDirection:'row',alignItems:'center',paddingHorizontal:14,gap:12,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#e5e7eb'},lockIcon:{width:40,height:40,borderRadius:13,backgroundColor:'#f9fafb',alignItems:'center',justifyContent:'center'},lockIconText:{fontSize:17},lockedTitle:{color:'#111827',fontSize:14,fontWeight:'900'},lockedSubtitle:{color:'#6b7280',fontSize:10,marginTop:3},lockBadge:{borderRadius:999,backgroundColor:'#f5f3ff',paddingHorizontal:8,paddingVertical:5},lockBadgeText:{color:'#7c3aed',fontSize:8,fontWeight:'900'},
-  helpCard:{minHeight:72,marginTop:18,borderRadius:20,backgroundColor:'#fafafa',borderWidth:1,borderColor:'#e5e7eb',paddingHorizontal:15,flexDirection:'row',alignItems:'center',gap:12},helpIcon:{width:40,height:40,borderRadius:20,backgroundColor:'#111827',alignItems:'center',justifyContent:'center'},helpIconText:{color:'#fff',fontWeight:'900'},helpTitle:{color:'#111827',fontWeight:'900'},helpCopy:{color:'#6b7280',fontSize:10,marginTop:3},
+  sectionEyebrow:{color:'#6b7280',fontSize:10,fontWeight:'900',letterSpacing:1.5,marginTop:30,marginBottom:12},
   accountCard:{marginTop:26,borderRadius:24,borderWidth:1,borderColor:'#e5e7eb',backgroundColor:'#fafafa',padding:18,flexDirection:'row',alignItems:'flex-start',gap:15},accountAvatar:{width:60,height:60,borderRadius:30,backgroundColor:'#7c3aed',alignItems:'center',justifyContent:'center'},accountAvatarText:{color:'#fff',fontSize:21,fontWeight:'900'},accountName:{color:'#111827',fontSize:18,fontWeight:'900'},accountEmail:{color:'#6b7280',fontSize:12,marginTop:4},accountRolePill:{alignSelf:'flex-start',marginTop:10,borderRadius:999,paddingHorizontal:9,paddingVertical:5,backgroundColor:'#f3efff'},accountRoleText:{color:'#7c3aed',fontSize:8,fontWeight:'900',letterSpacing:1},socialRow:{flexDirection:'row',alignItems:'center',marginTop:14,paddingTop:12,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:'#e5e7eb'},socialStat:{minWidth:78},socialNumber:{color:'#111827',fontSize:17,fontWeight:'900'},socialLabel:{color:'#6b7280',fontSize:11,fontWeight:'700',marginTop:2},socialDivider:{width:1,height:30,backgroundColor:'#e5e7eb',marginHorizontal:16},
   quickGrid:{flexDirection:'row',flexWrap:'wrap',gap:10},quick:{width:'48.5%',minHeight:118,borderRadius:20,borderWidth:1,borderColor:'#e5e7eb',backgroundColor:'#fff',padding:15,justifyContent:'space-between'},quickPressed:{backgroundColor:'#faf5ff',borderColor:'#ddd6fe',transform:[{scale:.985}]},quickIconCircle:{width:38,height:38,borderRadius:12,backgroundColor:'#f5f3ff',alignItems:'center',justifyContent:'center'},quickIcon:{color:'#7c3aed',fontSize:20,fontWeight:'900'},quickTitle:{color:'#111827',fontSize:14,fontWeight:'900'},quickSubtitle:{color:'#6b7280',fontSize:10,marginTop:4},
   menu:{borderRadius:22,borderWidth:1,borderColor:'#e5e7eb',overflow:'hidden',backgroundColor:'#fff'},menuRow:{minHeight:76,paddingHorizontal:14,paddingVertical:10,flexDirection:'row',alignItems:'center',gap:12,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#e5e7eb'},rowPressed:{backgroundColor:'#fafafa'},menuIcon:{width:40,height:40,borderRadius:13,backgroundColor:'#f5f3ff',alignItems:'center',justifyContent:'center'},menuIconText:{color:'#7c3aed',fontSize:18,fontWeight:'900'},menuText:{color:'#111827',fontWeight:'900'},menuSub:{color:'#6b7280',fontSize:11,lineHeight:16,marginTop:3},chevron:{color:'#9ca3af',fontSize:26},signOut:{minHeight:52,borderRadius:16,borderWidth:1,borderColor:'#fecaca',backgroundColor:'#fff',alignItems:'center',justifyContent:'center',marginTop:20},signOutText:{color:'#dc2626',fontWeight:'900'},pressed:{opacity:.72},
