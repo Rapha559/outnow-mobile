@@ -7,6 +7,7 @@ import { useColorScheme } from 'react-native';
 
 import { AppErrorBoundary } from '@/components/app-error-boundary';
 import { AppLaunchIntro } from '@/components/app-launch-intro';
+import { StaffScannerShortcut } from '@/components/staff-scanner-shortcut';
 import { AuthProvider } from '@/context/auth-context';
 import { installSystemThemePreprocessors, setSystemThemeScheme, systemThemeColors } from '@/lib/system-theme';
 
@@ -48,9 +49,10 @@ export default function RootLayout(){
       <Stack.Screen name="(tabs)"/><Stack.Screen name="event/[id]"/><Stack.Screen name="organiser/[id]"/><Stack.Screen name="ticket/[id]"/>
       <Stack.Screen name="tickets/transfer/accept"/>
       <Stack.Screen name="customer/orders"/><Stack.Screen name="customer/activity"/><Stack.Screen name="customer/checkout-result"/><Stack.Screen name="customer/reminders"/>
-      <Stack.Screen name="login"/><Stack.Screen name="signup"/><Stack.Screen name="verify"/><Stack.Screen name="settings"/>
-      <Stack.Screen name="promoter/dashboard"/><Stack.Screen name="promoter/analytics"/><Stack.Screen name="promoter/events"/><Stack.Screen name="promoter/create-event"/>
+      <Stack.Screen name="login"/><Stack.Screen name="signup"/><Stack.Screen name="verify"/><Stack.Screen name="settings"/><Stack.Screen name="staff"/>
+      <Stack.Screen name="promoter/dashboard"/><Stack.Screen name="promoter/analytics"/><Stack.Screen name="promoter/events"/><Stack.Screen name="promoter/create-event"/><Stack.Screen name="promoter/scanner"/>
     </Stack>
+    <StaffScannerShortcut/>
     {showLaunchIntro&&<AppLaunchIntro onFinish={finishLaunchIntro}/>} 
   </AuthProvider></AppErrorBoundary>;
 }
