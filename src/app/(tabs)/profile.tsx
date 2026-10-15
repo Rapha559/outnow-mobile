@@ -84,7 +84,7 @@ export default function ProfileScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           <Animated.View style={{ opacity: fade, transform: [{ translateY: slide }] }}>
             <View style={styles.header}>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.eyebrow}>OUTNOW ACCOUNT</Text>
                 <Text style={styles.title}>{isPromoter ? 'Promoter Profile' : 'Profile'}</Text>
                 <Text style={styles.copy}>
@@ -95,7 +95,19 @@ export default function ProfileScreen() {
                     : 'Unlock your tickets, favourites and event activity.'}
                 </Text>
               </View>
-              <View style={styles.headerMark}><Text style={styles.headerMarkText}>O</Text></View>
+              <View style={styles.headerActions}>
+                {isAuthenticated && (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Open notifications"
+                    style={({ pressed }) => [styles.notificationButton, pressed && styles.pressed]}
+                    onPress={() => router.push('/notifications')}
+                  >
+                    <Text style={styles.notificationBell}>🔔</Text>
+                  </Pressable>
+                )}
+                <View style={styles.headerMark}><Text style={styles.headerMarkText}>O</Text></View>
+              </View>
             </View>
 
             {!isAuthenticated ? (
@@ -232,7 +244,7 @@ function MenuRow({ icon, label, subtitle, onPress }: { icon: string; label: stri
 
 const styles = StyleSheet.create({
   screen:{flex:1,backgroundColor:'#fff'},safe:{flex:1},center:{flex:1,alignItems:'center',justifyContent:'center'},content:{paddingHorizontal:18,paddingTop:14},
-  header:{flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:18},eyebrow:{color:'#7c3aed',fontSize:11,fontWeight:'900',letterSpacing:2.1},title:{color:'#111827',fontSize:39,lineHeight:44,fontWeight:'900',marginTop:9},copy:{color:'#6b7280',fontSize:15,lineHeight:22,marginTop:8,maxWidth:320},headerMark:{width:44,height:44,borderRadius:22,backgroundColor:'#f3efff',borderWidth:1,borderColor:'#ddd6fe',alignItems:'center',justifyContent:'center',marginTop:4},headerMarkText:{color:'#7c3aed',fontSize:18,fontWeight:'900'},
+  header:{flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:18},eyebrow:{color:'#7c3aed',fontSize:11,fontWeight:'900',letterSpacing:2.1},title:{color:'#111827',fontSize:39,lineHeight:44,fontWeight:'900',marginTop:9},copy:{color:'#6b7280',fontSize:15,lineHeight:22,marginTop:8,maxWidth:320},headerActions:{flexDirection:'row',alignItems:'center',gap:8,marginTop:4},notificationButton:{width:44,height:44,borderRadius:22,backgroundColor:'#f3efff',borderWidth:1,borderColor:'#ddd6fe',alignItems:'center',justifyContent:'center'},notificationBell:{fontSize:19,lineHeight:22},headerMark:{width:44,height:44,borderRadius:22,backgroundColor:'#f3efff',borderWidth:1,borderColor:'#ddd6fe',alignItems:'center',justifyContent:'center'},headerMarkText:{color:'#7c3aed',fontSize:18,fontWeight:'900'},
   guestHero:{marginTop:26,borderRadius:28,backgroundColor:'#111827',padding:22,minHeight:255,overflow:'hidden'},heroGlowOne:{position:'absolute',width:190,height:190,borderRadius:95,backgroundColor:'#7c3aed',opacity:.32,right:-65,top:-70},heroGlowTwo:{position:'absolute',width:140,height:140,borderRadius:70,backgroundColor:'#a78bfa',opacity:.13,left:-40,bottom:-70},guestTop:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},guestAvatar:{width:58,height:58,borderRadius:29,backgroundColor:'#fff',alignItems:'center',justifyContent:'center'},guestAvatarText:{color:'#7c3aed',fontSize:21,fontWeight:'900'},guestBadge:{borderRadius:999,backgroundColor:'rgba(255,255,255,0.12)',borderWidth:1,borderColor:'rgba(255,255,255,0.18)',paddingHorizontal:11,paddingVertical:7},guestBadgeText:{color:'#ddd6fe',fontSize:9,fontWeight:'900',letterSpacing:1.1},guestTitle:{color:'#fff',fontSize:26,fontWeight:'900',marginTop:22},guestCopy:{color:'#d1d5db',fontSize:13,lineHeight:20,marginTop:7,maxWidth:310},previewStats:{marginTop:20,borderRadius:18,backgroundColor:'rgba(255,255,255,0.08)',paddingVertical:14,flexDirection:'row',alignItems:'center'},previewStat:{flex:1,alignItems:'center'},previewValue:{color:'#fff',fontSize:19,fontWeight:'900'},previewLabel:{color:'#c4b5fd',fontSize:10,fontWeight:'800',marginTop:3},statDivider:{width:1,height:28,backgroundColor:'rgba(255,255,255,0.16)'},
   authSection:{marginTop:18},primary:{minHeight:56,borderRadius:18,backgroundColor:'#7c3aed',flexDirection:'row',alignItems:'center',justifyContent:'center',paddingHorizontal:18},primaryPressed:{transform:[{scale:.985}],opacity:.92},primaryIcon:{position:'absolute',left:12,width:34,height:34,borderRadius:17,backgroundColor:'rgba(255,255,255,0.16)',alignItems:'center',justifyContent:'center'},primaryIconText:{color:'#fff',fontSize:18,fontWeight:'900'},primaryText:{color:'#fff',fontSize:15,fontWeight:'900'},secondary:{minHeight:54,borderRadius:18,borderWidth:1,borderColor:'#d1d5db',backgroundColor:'#fff',alignItems:'center',justifyContent:'center',marginTop:10},secondaryText:{color:'#111827',fontSize:15,fontWeight:'900'},authHint:{color:'#9ca3af',fontSize:10,textAlign:'center',marginTop:10},
   sectionEyebrow:{color:'#6b7280',fontSize:10,fontWeight:'900',letterSpacing:1.5,marginTop:30,marginBottom:12},
