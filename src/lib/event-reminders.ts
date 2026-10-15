@@ -1,4 +1,3 @@
-import * as Notifications from 'expo-notifications';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
@@ -6,15 +5,31 @@ const ENABLED_KEY='outnow_event_reminders_enabled';
 const IDS_KEY='outnow_event_reminder_ids';
 const CHANNEL_ID='event-reminders';
 
+type NotificationsModule = typeof import('expo-notifications');
+
+let notificationsPromise: Promise<NotificationsModule | null> | null = null;
+
+async function getNotifications(): Promise<NotificationsModule | null> {
+  if (!notificationsPromise) {
+    notificationsPromise = import('expo-notifications').catch((error) => {
+      if (__DEV__) {
+        console.warn('Event reminders are unavailable in this runtime.', error);
+      }
+      return null;
+    });
+  }
+  return notificationsPromise;
+}
+
 export type ReminderTicket={
   event:{id:string;title:string;date:string;venue:string;location:string;status:string};
 };
 
-async function ensureChannel(){
+async function ensureChannel(notifications: NotificationsModule){
   if(Platform.OS==='android'){
-    await Notifications.setNotificationChannelAsync(CHANNEL_ID,{
+    await notifications.setNotificationChannelAsync(CHANNEL_ID,{
       name:'Event reminders',
-      importance:Notifications.AndroidImportance.HIGH,
+      importance:notifications.AndroidImportance.HIGH,
       vibrationPattern:[0,250,150,250],
     });
   }
@@ -27,8 +42,11 @@ async function storedIds(){
 }
 
 async function clearScheduled(){
+  const notifications=await getNotifications();
   const ids=await storedIds();
-  await Promise.all(ids.map(id=>Notifications.cancelScheduledNotificationAsync(id).catch(()=>undefined)));
+  if(notifications){
+    await Promise.all(ids.map(id=>notifications.cancelScheduledNotificationAsync(id).catch(()=>undefined)));
+  }
   await SecureStore.deleteItemAsync(IDS_KEY);
 }
 
@@ -37,9 +55,14 @@ export async function remindersEnabled(){
 }
 
 export async function enableEventReminders(tickets:ReminderTicket[]){
-  await ensureChannel();
-  const existing=await Notifications.getPermissionsAsync();
-  const permission=existing.status==='granted'?existing:await Notifications.requestPermissionsAsync();
+  const notifications=await getNotifications();
+  if(!notifications){
+    throw new Error('Event reminders require an OutNow development build on this device.');
+  }
+
+  await ensureChannel(notifications);
+  const existing=await notifications.getPermissionsAsync();
+  const permission=existing.status==='granted'?existing:await notifications.requestPermissionsAsync();
   if(permission.status!=='granted')throw new Error('Notification permission was not granted.');
   await SecureStore.setItemAsync(ENABLED_KEY,'1');
   return syncEventReminders(tickets,true);
@@ -52,8 +75,12 @@ export async function disableEventReminders(){
 
 export async function syncEventReminders(tickets:ReminderTicket[],force=false){
   if(!force&&!(await remindersEnabled()))return 0;
-  await ensureChannel();
-  const permissions=await Notifications.getPermissionsAsync();
+
+  const notifications=await getNotifications();
+  if(!notifications)return 0;
+
+  await ensureChannel(notifications);
+  const permissions=await notifications.getPermissionsAsync();
   if(permissions.status!=='granted')return 0;
   await clearScheduled();
 
@@ -70,7 +97,7 @@ export async function syncEventReminders(tickets:ReminderTicket[],force=false){
     for(const reminder of [{hours:24,label:'Tomorrow'},{hours:2,label:'Starting soon'}]){
       const triggerAt=eventTime-reminder.hours*60*60*1000;
       if(triggerAt<=now+30000)continue;
-      const id=await Notifications.scheduleNotificationAsync({
+      const id=await notifications.scheduleNotificationAsync({
         content:{
           title:reminder.label==='Tomorrow'?`${event.title} is tomorrow`:`${event.title} starts in 2 hours`,
           body:`${event.venue} · ${event.location}`,
@@ -78,7 +105,7 @@ export async function syncEventReminders(tickets:ReminderTicket[],force=false){
           sound:'default',
         },
         trigger:{
-          type:Notifications.SchedulableTriggerInputTypes.DATE,
+          type:notifications.SchedulableTriggerInputTypes.DATE,
           date:new Date(triggerAt),
           channelId:CHANNEL_ID,
         },
