@@ -6,16 +6,38 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppleAuthentication, isAppleSignInAvailable, startAppleAuth } from '@/lib/apple-auth';
 import { apiRequest } from '@/lib/api';
 import { startMobileGoogleAuth } from '@/lib/google-auth';
+import { useAuth } from '@/context/auth-context';
 
 type AccountType='CUSTOMER'|'PROMOTER';
 type SignupResponse={success:true;requiresVerification:true;email:string;maskedEmail:string;role:AccountType};
 
+function isSafeCustomerRedirect(value?:string){
+  if(!value||!value.startsWith('/'))return false;
+  return value.startsWith('/event/')||value.startsWith('/tickets/transfer/accept');
+}
+
 export default function SignupScreen(){
   const params=useLocalSearchParams<{redirect?:string}>();
+  const {saveSession}=useAuth();
   const [accountType,setAccountType]=useState<AccountType>('CUSTOMER');const [name,setName]=useState('');const [email,setEmail]=useState('');const [phone,setPhone]=useState('');const [password,setPassword]=useState('');const [confirmPassword,setConfirmPassword]=useState('');const [loading,setLoading]=useState(false);const [googleLoading,setGoogleLoading]=useState(false);const [appleLoading,setAppleLoading]=useState(false);const [appleAvailable,setAppleAvailable]=useState(false);const [error,setError]=useState('');
   useEffect(()=>{if(Platform.OS==='ios')void isAppleSignInAvailable().then(setAppleAvailable);},[]);
   async function submit(){if(!name.trim()||!email.trim()||!password){setError('Name, email and password are required.');return;}if(password.length<8){setError('Password must be at least 8 characters.');return;}if(password!==confirmPassword){setError('Passwords do not match.');return;}try{setLoading(true);setError('');const data=await apiRequest<SignupResponse>('/api/mobile/auth/signup',{method:'POST',body:JSON.stringify({name,email,phone,password,confirmPassword,accountType})});router.replace({pathname:'/verify',params:{mode:'signup',email:data.email,maskedEmail:data.maskedEmail,role:data.role,...(params.redirect?{redirect:params.redirect}:{})}});}catch(err){setError(err instanceof Error?err.message:'Unable to create your account.');}finally{setLoading(false);}}
-  async function googleSignup(){try{setGoogleLoading(true);setError('');const result=await startMobileGoogleAuth({mode:'signup',role:accountType,redirect:params.redirect});router.replace({pathname:'/verify',params:{mode:'login',challengeToken:result.challengeToken,maskedEmail:result.email,...((result.redirect||params.redirect)?{redirect:result.redirect||params.redirect}:{})}});}catch(err){setError(err instanceof Error?err.message:'Google sign-up failed.');}finally{setGoogleLoading(false);}}
+  async function googleSignup(){
+    try{
+      setGoogleLoading(true);setError('');
+      const result=await startMobileGoogleAuth({mode:'signup',role:accountType,redirect:params.redirect});
+      await saveSession(result.sessionToken,result.user);
+      const redirect=result.redirect||params.redirect;
+      if(result.user.role==='CUSTOMER'&&isSafeCustomerRedirect(redirect)){
+        router.replace(redirect as never);return;
+      }
+      if(result.user.role==='PROMOTER'){
+        router.replace('/promoter/dashboard');return;
+      }
+      router.replace('/(tabs)/profile');
+    }catch(err){setError(err instanceof Error?err.message:'Google sign-up failed.');}
+    finally{setGoogleLoading(false);}
+  }
   async function appleSignup(){try{setAppleLoading(true);setError('');const result=await startAppleAuth({mode:'signup',role:accountType});router.replace({pathname:'/verify',params:{mode:'login',challengeToken:result.challengeToken,maskedEmail:result.email,...(params.redirect?{redirect:params.redirect}:{})}});}catch(err){const message=err instanceof Error?err.message:'Apple sign-up failed.';if(!message.includes('ERR_REQUEST_CANCELED'))setError(message);}finally{setAppleLoading(false);}}
   const busy=loading||googleLoading||appleLoading;
   return <View style={styles.screen}><SafeAreaView style={styles.safeArea}><KeyboardAvoidingView style={styles.flex} behavior={Platform.OS==='ios'?'padding':undefined}><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
