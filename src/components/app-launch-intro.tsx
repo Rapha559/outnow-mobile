@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Image, StyleSheet, View } from 'react-native';
+import { Animated, Image, StyleSheet, Text, View } from 'react-native';
 
 type Props = {
   onFinish: () => void;
@@ -8,7 +8,8 @@ type Props = {
 export function AppLaunchIntro({ onFinish }: Props) {
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.72)).current;
-  const glowOpacity = useRef(new Animated.Value(0)).current;
+  const brandOpacity = useRef(new Animated.Value(0)).current;
+  const brandTranslate = useRef(new Animated.Value(12)).current;
   const screenOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -16,7 +17,7 @@ export function AppLaunchIntro({ onFinish }: Props) {
       Animated.parallel([
         Animated.timing(logoOpacity, {
           toValue: 1,
-          duration: 380,
+          duration: 420,
           useNativeDriver: true,
         }),
         Animated.spring(logoScale, {
@@ -26,22 +27,29 @@ export function AppLaunchIntro({ onFinish }: Props) {
           mass: 0.8,
           useNativeDriver: true,
         }),
-        Animated.timing(glowOpacity, {
-          toValue: 0.42,
-          duration: 620,
+      ]),
+      Animated.parallel([
+        Animated.spring(logoScale, {
+          toValue: 1,
+          damping: 12,
+          stiffness: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(brandOpacity, {
+          toValue: 1,
+          duration: 420,
+          useNativeDriver: true,
+        }),
+        Animated.timing(brandTranslate, {
+          toValue: 0,
+          duration: 420,
           useNativeDriver: true,
         }),
       ]),
-      Animated.spring(logoScale, {
-        toValue: 1,
-        damping: 12,
-        stiffness: 150,
-        useNativeDriver: true,
-      }),
       Animated.delay(1200),
       Animated.timing(screenOpacity, {
         toValue: 0,
-        duration: 340,
+        duration: 360,
         useNativeDriver: true,
       }),
     ]);
@@ -51,22 +59,36 @@ export function AppLaunchIntro({ onFinish }: Props) {
     });
 
     return () => animation.stop();
-  }, [glowOpacity, logoOpacity, logoScale, onFinish, screenOpacity]);
+  }, [brandOpacity, brandTranslate, logoOpacity, logoScale, onFinish, screenOpacity]);
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, styles.screen, { opacity: screenOpacity }]}>
       <View style={styles.logoStage}>
-        <Animated.View style={[styles.glow, { opacity: glowOpacity }]} />
         <Animated.View
-          style={{
-            opacity: logoOpacity,
-            transform: [{ scale: logoScale }],
-          }}>
+          style={[
+            styles.logoWrap,
+            {
+              opacity: logoOpacity,
+              transform: [{ scale: logoScale }],
+            },
+          ]}>
           <Image
-            source={require('../../assets/images/logo-glow.png')}
+            source={require('../../assets/images/icon.png')}
             style={styles.logo}
             resizeMode="contain"
           />
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            styles.brandWrap,
+            {
+              opacity: brandOpacity,
+              transform: [{ translateY: brandTranslate }],
+            },
+          ]}>
+          <Text style={styles.brand}>OUTNOW</Text>
+          <Text style={styles.tagline}>TICKETS · EVENTS · NOW</Text>
         </Animated.View>
       </View>
     </Animated.View>
@@ -82,25 +104,39 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoStage: {
-    width: 290,
-    height: 290,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  glow: {
-    position: 'absolute',
-    width: 230,
-    height: 230,
-    borderRadius: 115,
-    backgroundColor: '#8b2cff',
-    shadowColor: '#9b35ff',
-    shadowOpacity: 0.9,
-    shadowRadius: 42,
+  logoWrap: {
+    width: 250,
+    height: 250,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#8b2cff',
+    shadowOpacity: 0.42,
+    shadowRadius: 32,
     shadowOffset: { width: 0, height: 0 },
-    elevation: 20,
+    elevation: 14,
   },
   logo: {
-    width: 245,
-    height: 245,
+    width: 235,
+    height: 235,
+  },
+  brandWrap: {
+    alignItems: 'center',
+    marginTop: 14,
+  },
+  brand: {
+    color: '#ffffff',
+    fontSize: 27,
+    fontWeight: '900',
+    letterSpacing: 5,
+  },
+  tagline: {
+    color: '#a78bfa',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 2.1,
+    marginTop: 8,
   },
 });
