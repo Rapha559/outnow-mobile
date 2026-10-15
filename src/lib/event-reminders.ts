@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
@@ -9,7 +10,12 @@ type NotificationsModule = typeof import('expo-notifications');
 
 let notificationsPromise: Promise<NotificationsModule | null> | null = null;
 
+function isExpoGo(){
+  return Constants.appOwnership==='expo';
+}
+
 async function getNotifications(): Promise<NotificationsModule | null> {
+  if(isExpoGo())return null;
   if (!notificationsPromise) {
     notificationsPromise = import('expo-notifications').catch((error) => {
       if (__DEV__) {
