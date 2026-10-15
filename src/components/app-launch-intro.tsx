@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Image, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 
 type Props = {
   onFinish: () => void;
@@ -21,24 +21,20 @@ export function AppLaunchIntro({ onFinish }: Props) {
   useEffect(() => {
     const ringOneAnimation = Animated.sequence([
       Animated.delay(120),
-      Animated.parallel([
-        Animated.timing(ringOne, {
-          toValue: 1,
-          duration: 900,
-          useNativeDriver: true,
-        }),
-      ]),
+      Animated.timing(ringOne, {
+        toValue: 1,
+        duration: 900,
+        useNativeDriver: true,
+      }),
     ]);
 
     const ringTwoAnimation = Animated.sequence([
       Animated.delay(360),
-      Animated.parallel([
-        Animated.timing(ringTwo, {
-          toValue: 1,
-          duration: 950,
-          useNativeDriver: true,
-        }),
-      ]),
+      Animated.timing(ringTwo, {
+        toValue: 1,
+        duration: 950,
+        useNativeDriver: true,
+      }),
     ]);
 
     const introAnimation = Animated.sequence([
@@ -216,19 +212,33 @@ export function AppLaunchIntro({ onFinish }: Props) {
         </Animated.View>
 
         <Animated.View
-          style={{
-            opacity: logoOpacity,
-            transform: [
-              { translateY },
-              { rotate },
-              { scale: logoScale },
-            ],
-          }}>
-          <Image
-            source={require('../../assets/images/logo-glow.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+          style={[
+            styles.emblemWrap,
+            {
+              opacity: logoOpacity,
+              transform: [
+                { translateY },
+                { rotate },
+                { scale: logoScale },
+              ],
+            },
+          ]}>
+          <View style={styles.logoRing}>
+            <View style={styles.logoRingInner}>
+              <View style={styles.ticket}>
+                <View style={[styles.ticketNotch, styles.ticketNotchTop]} />
+                <View style={[styles.ticketNotch, styles.ticketNotchBottom]} />
+                <View style={[styles.ticketSideNotch, styles.ticketSideNotchLeft]} />
+                <View style={[styles.ticketSideNotch, styles.ticketSideNotchRight]} />
+                <View style={styles.perforationColumn}>
+                  <View style={styles.perforationDash} />
+                  <View style={styles.perforationDash} />
+                  <View style={styles.perforationDash} />
+                  <View style={styles.perforationDash} />
+                </View>
+              </View>
+            </View>
+          </View>
         </Animated.View>
       </View>
 
@@ -289,9 +299,87 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#c084fc',
   },
-  logo: {
+  emblemWrap: {
     width: 215,
     height: 215,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoRing: {
+    width: 202,
+    height: 202,
+    borderRadius: 101,
+    borderWidth: 15,
+    borderColor: '#9333ea',
+    backgroundColor: '#2e1065',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#a855f7',
+    shadowOpacity: 0.95,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 20,
+  },
+  logoRingInner: {
+    width: 158,
+    height: 158,
+    borderRadius: 79,
+    backgroundColor: '#050505',
+    borderWidth: 1,
+    borderColor: '#6d28d9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ticket: {
+    width: 84,
+    height: 104,
+    borderRadius: 15,
+    backgroundColor: '#a855f7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#d946ef',
+    shadowOpacity: 0.75,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 12,
+  },
+  ticketNotch: {
+    position: 'absolute',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#050505',
+    left: 30,
+  },
+  ticketNotchTop: {
+    top: -12,
+  },
+  ticketNotchBottom: {
+    bottom: -12,
+  },
+  ticketSideNotch: {
+    position: 'absolute',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#050505',
+    top: 38,
+  },
+  ticketSideNotchLeft: {
+    left: -14,
+  },
+  ticketSideNotchRight: {
+    right: -14,
+  },
+  perforationColumn: {
+    gap: 8,
+    alignItems: 'center',
+  },
+  perforationDash: {
+    width: 7,
+    height: 14,
+    borderRadius: 4,
+    backgroundColor: '#2e1065',
   },
   sparkle: {
     position: 'absolute',
