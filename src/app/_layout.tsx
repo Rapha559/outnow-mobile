@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -15,6 +16,8 @@ void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function NotificationObserver(){
   useEffect(()=>{
+    if(Constants.appOwnership==='expo')return;
+
     let subscription:{remove:()=>void}|undefined;
     let active=true;
 
