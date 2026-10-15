@@ -19,6 +19,27 @@ void SplashScreen.preventAutoHideAsync().catch(() => {});
 // reloads the JS bundle, so the intro still appears normally on launch.
 let launchIntroShownThisRun=false;
 
+function notificationRoute(data: Record<string, unknown> | undefined){
+  if(!data)return '/notifications';
+
+  const url=typeof data.url==='string'?data.url.trim():'';
+  if(url.startsWith('/'))return url;
+
+  const ticketId=typeof data.ticketId==='string'?data.ticketId.trim():'';
+  if(ticketId)return `/ticket/${encodeURIComponent(ticketId)}`;
+
+  const eventId=typeof data.eventId==='string'?data.eventId.trim():'';
+  if(eventId)return `/event/${encodeURIComponent(eventId)}`;
+
+  const orderId=typeof data.orderId==='string'?data.orderId.trim():'';
+  if(orderId)return `/customer/orders?orderId=${encodeURIComponent(orderId)}`;
+
+  const transferToken=typeof data.transferToken==='string'?data.transferToken.trim():'';
+  if(transferToken)return `/tickets/transfer/accept?token=${encodeURIComponent(transferToken)}`;
+
+  return '/notifications';
+}
+
 function NotificationObserver(){
   useEffect(()=>{
     if(Constants.appOwnership==='expo')return;
@@ -32,12 +53,12 @@ function NotificationObserver(){
         if(!active)return;
 
         Notifications.setNotificationHandler({
-          handleNotification:async()=>({shouldShowBanner:true,shouldShowList:true,shouldPlaySound:true,shouldSetBadge:false}),
+          handleNotification:async()=>({shouldShowBanner:true,shouldShowList:true,shouldPlaySound:true,shouldSetBadge:true}),
         });
 
         function open(notification:any){
-          const url=notification?.request?.content?.data?.url;
-          if(typeof url==='string')router.push(url as never);
+          const data=notification?.request?.content?.data as Record<string,unknown>|undefined;
+          router.push(notificationRoute(data) as never);
         }
 
         const initial=Notifications.getLastNotificationResponse();
@@ -80,7 +101,7 @@ export default function RootLayout(){
     <NotificationObserver/><StatusBar style={showLaunchIntro?'light':theme.dark?'light':'dark'}/>
     <Stack key={theme.dark?'dark':'light'} screenOptions={{headerShown:false,contentStyle:{backgroundColor:theme.background}}}>
       <Stack.Screen name="(tabs)"/><Stack.Screen name="event/[id]"/><Stack.Screen name="organiser/[id]"/><Stack.Screen name="ticket/[id]"/>
-      <Stack.Screen name="tickets/transfer/accept"/>
+      <Stack.Screen name="notifications"/><Stack.Screen name="tickets/transfer/accept"/>
       <Stack.Screen name="customer/orders"/><Stack.Screen name="customer/activity"/><Stack.Screen name="customer/checkout-result"/><Stack.Screen name="customer/reminders"/>
       <Stack.Screen name="login"/><Stack.Screen name="signup"/><Stack.Screen name="verify"/><Stack.Screen name="settings"/><Stack.Screen name="staff"/>
       <Stack.Screen name="promoter/dashboard"/><Stack.Screen name="promoter/analytics"/><Stack.Screen name="promoter/events"/><Stack.Screen name="promoter/create-event"/><Stack.Screen name="promoter/scanner"/>
