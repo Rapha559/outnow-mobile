@@ -1,4 +1,3 @@
-import * as Notifications from 'expo-notifications';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -14,16 +13,40 @@ import { installSystemThemePreprocessors, setSystemThemeScheme, systemThemeColor
 installSystemThemePreprocessors();
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 
-Notifications.setNotificationHandler({
-  handleNotification:async()=>({shouldShowBanner:true,shouldShowList:true,shouldPlaySound:true,shouldSetBadge:false}),
-});
-
 function NotificationObserver(){
   useEffect(()=>{
-    function open(notification:Notifications.Notification){const url=notification.request.content.data?.url;if(typeof url==='string')router.push(url as never);}
-    const initial=Notifications.getLastNotificationResponse();if(initial?.notification)open(initial.notification);
-    const subscription=Notifications.addNotificationResponseReceivedListener(response=>open(response.notification));
-    return()=>subscription.remove();
+    let subscription:{remove:()=>void}|undefined;
+    let active=true;
+
+    async function setupNotifications(){
+      try{
+        const Notifications=await import('expo-notifications');
+        if(!active)return;
+
+        Notifications.setNotificationHandler({
+          handleNotification:async()=>({shouldShowBanner:true,shouldShowList:true,shouldPlaySound:true,shouldSetBadge:false}),
+        });
+
+        function open(notification:any){
+          const url=notification?.request?.content?.data?.url;
+          if(typeof url==='string')router.push(url as never);
+        }
+
+        const initial=Notifications.getLastNotificationResponse();
+        if(initial?.notification)open(initial.notification);
+        subscription=Notifications.addNotificationResponseReceivedListener(response=>open(response.notification));
+      }catch{
+        if(__DEV__){
+          console.warn('Notifications are unavailable in this client. Use a development build for full notification support.');
+        }
+      }
+    }
+
+    void setupNotifications();
+    return()=>{
+      active=false;
+      subscription?.remove();
+    };
   },[]);
   return null;
 }
