@@ -6,15 +6,43 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppleAuthentication, isAppleSignInAvailable, startAppleAuth } from '@/lib/apple-auth';
 import { apiRequest } from '@/lib/api';
 import { startMobileGoogleAuth } from '@/lib/google-auth';
+import { useAuth } from '@/context/auth-context';
 
 type LoginResponse={success:true;requiresVerification:true;challengeToken:string;email:string;role:string};
+type StaffAccessResponse={success:true;hasScannerAccess:boolean;assignments:Array<{id:string;role:'SCANNER'}>};
+
+function isSafeCustomerRedirect(value?:string){
+  if(!value||!value.startsWith('/'))return false;
+  return value.startsWith('/event/')||value.startsWith('/tickets/transfer/accept');
+}
 
 export default function LoginScreen(){
   const params=useLocalSearchParams<{redirect?:string}>();
+  const {saveSession}=useAuth();
   const [email,setEmail]=useState('');const [password,setPassword]=useState('');const [loading,setLoading]=useState(false);const [googleLoading,setGoogleLoading]=useState(false);const [appleLoading,setAppleLoading]=useState(false);const [appleAvailable,setAppleAvailable]=useState(false);const [error,setError]=useState('');
   useEffect(()=>{if(Platform.OS==='ios')void isAppleSignInAvailable().then(setAppleAvailable);},[]);
   async function submit(){if(!email.trim()||!password){setError('Enter your email and password.');return;}try{setLoading(true);setError('');const data=await apiRequest<LoginResponse>('/api/mobile/auth/login',{method:'POST',body:JSON.stringify({email,password,rememberMe:true})});router.replace({pathname:'/verify',params:{mode:'login',challengeToken:data.challengeToken,maskedEmail:data.email,...(params.redirect?{redirect:params.redirect}:{})}});}catch(err){setError(err instanceof Error?err.message:'Unable to sign in.');}finally{setLoading(false);}}
-  async function googleSignIn(){try{setGoogleLoading(true);setError('');const result=await startMobileGoogleAuth({mode:'login',redirect:params.redirect});router.replace({pathname:'/verify',params:{mode:'login',challengeToken:result.challengeToken,maskedEmail:result.email,...(result.redirect?{redirect:result.redirect}:{})}});}catch(err){setError(err instanceof Error?err.message:'Google sign-in failed.');}finally{setGoogleLoading(false);}}
+  async function googleSignIn(){
+    try{
+      setGoogleLoading(true);setError('');
+      const result=await startMobileGoogleAuth({mode:'login',redirect:params.redirect});
+      await saveSession(result.sessionToken,result.user);
+
+      const redirect=result.redirect||params.redirect;
+      if(result.user.role==='CUSTOMER'&&isSafeCustomerRedirect(redirect)){
+        router.replace(redirect as never);return;
+      }
+      if(result.user.role==='PROMOTER'){
+        router.replace('/promoter/dashboard');return;
+      }
+      try{
+        const staffAccess=await apiRequest<StaffAccessResponse>('/api/mobile/staff/access',{},result.sessionToken);
+        if(staffAccess.hasScannerAccess&&staffAccess.assignments.length>0){router.replace('/staff');return;}
+      }catch{}
+      router.replace('/(tabs)/profile');
+    }catch(err){setError(err instanceof Error?err.message:'Google sign-in failed.');}
+    finally{setGoogleLoading(false);}
+  }
   async function appleSignIn(){try{setAppleLoading(true);setError('');const result=await startAppleAuth({mode:'login'});router.replace({pathname:'/verify',params:{mode:'login',challengeToken:result.challengeToken,maskedEmail:result.email,...(params.redirect?{redirect:params.redirect}:{})}});}catch(err){const message=err instanceof Error?err.message:'Apple sign-in failed.';if(!message.includes('ERR_REQUEST_CANCELED'))setError(message);}finally{setAppleLoading(false);}}
   const busy=loading||googleLoading||appleLoading;
   return <View style={styles.screen}><SafeAreaView style={styles.safeArea}><KeyboardAvoidingView style={styles.flex} behavior={Platform.OS==='ios'?'padding':undefined}><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
