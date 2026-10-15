@@ -19,12 +19,12 @@ const ITEMS: SettingsItem[] = [
   { key: 'notifications', label: 'Notifications', subtitle: 'Push, email, reminders and promoter alerts', icon: '♧' },
   { key: 'event-defaults', label: 'Event defaults', subtitle: 'Refund and UK ticket VAT defaults', icon: '⌘', promoterOnly: true },
   { key: 'audience-privacy', label: 'Audience & privacy', subtitle: 'Marketing choices and personalisation', icon: '♙' },
-  { key: 'legal', label: 'Privacy & terms', subtitle: 'Read the key legal information inside OutNow', icon: '§', route: '/legal' },
+  { key: 'legal', label: 'Legal, privacy & refunds', subtitle: 'Refund guidance, ticketing terms, privacy and account rights', icon: '§', route: '/legal' },
   { key: 'payments-payouts', label: 'Payments & payouts', subtitle: 'Stripe connection, balances and payout readiness', icon: '▭', promoterOnly: true },
   { key: 'taxpayer-info', label: 'Taxpayer info', subtitle: 'Seller, tax residence and VAT details', icon: '▤', promoterOnly: true },
   { key: 'security-alerts', label: 'Security alerts', subtitle: 'Account protection and session security', icon: '♢' },
   { key: 'password', label: 'Password', subtitle: 'Create or change your password', icon: '▣' },
-  { key: 'account-controls', label: 'Account controls', subtitle: 'Sign out, support and account requests', icon: '◇' },
+  { key: 'account-controls', label: 'Account controls', subtitle: 'Sign out, support and account deletion requests', icon: '◇' },
 ];
 
 export default function SettingsMenuScreen() {
