@@ -15,7 +15,7 @@
         "applinks:outnowtickets.com",
         "applinks:www.outnowtickets.com"
       ],
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "config": {
         "usesNonExemptEncryption": false
       }
