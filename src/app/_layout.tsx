@@ -14,6 +14,11 @@ import { installSystemThemePreprocessors, setSystemThemeScheme, systemThemeColor
 installSystemThemePreprocessors();
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 
+// Keep this in module memory so an Android OAuth activity return can remount
+// RootLayout without replaying the entrance animation. A true cold app launch
+// reloads the JS bundle, so the intro still appears normally on launch.
+let launchIntroShownThisRun=false;
+
 function NotificationObserver(){
   useEffect(()=>{
     if(Constants.appOwnership==='expo')return;
@@ -58,14 +63,16 @@ export default function RootLayout(){
   const colorScheme=useColorScheme();
   const theme=systemThemeColors(colorScheme);
   setSystemThemeScheme(colorScheme);
-  const [showLaunchIntro,setShowLaunchIntro]=useState(true);
+  const [showLaunchIntro,setShowLaunchIntro]=useState(!launchIntroShownThisRun);
 
   useEffect(()=>{
+    if(showLaunchIntro)launchIntroShownThisRun=true;
     const timer=setTimeout(()=>{void SplashScreen.hideAsync().catch(()=>{});},100);
     return()=>clearTimeout(timer);
-  },[]);
+  },[showLaunchIntro]);
 
   const finishLaunchIntro=useCallback(()=>{
+    launchIntroShownThisRun=true;
     setShowLaunchIntro(false);
   },[]);
 
