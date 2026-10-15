@@ -5,6 +5,7 @@ import { apiRequest } from '@/lib/api';
 import { registerRemotePush, unregisterRemotePush } from '@/lib/push-notifications';
 
 const SESSION_KEY = 'outnow_user_session';
+const USER_KEY = 'outnow_cached_user';
 
 type OutNowUser = {
   id: string;
@@ -26,6 +27,23 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+async function cacheUser(user: OutNowUser | null) {
+  if (!user) {
+    await SecureStore.deleteItemAsync(USER_KEY);
+    return;
+  }
+  await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+}
+
+async function readCachedUser(): Promise<OutNowUser | null> {
+  try {
+    const raw = await SecureStore.getItemAsync(USER_KEY);
+    return raw ? (JSON.parse(raw) as OutNowUser) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<OutNowUser | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
@@ -35,10 +53,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let active = true;
 
     async function restoreSession() {
-      try {
-        const token = await SecureStore.getItemAsync(SESSION_KEY);
-        if (!token) return;
+      const token = await SecureStore.getItemAsync(SESSION_KEY);
+      if (!token) {
+        if (active) setLoading(false);
+        return;
+      }
 
+      try {
         const data = await apiRequest<{ authenticated: boolean; user: OutNowUser }>(
           '/api/mobile/auth/me',
           {},
@@ -48,9 +69,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!active) return;
         setSessionToken(token);
         setUser(data.user);
+        await cacheUser(data.user);
         void registerRemotePush(token).catch(() => undefined);
       } catch {
-        await SecureStore.deleteItemAsync(SESSION_KEY);
+        const cachedUser = await readCachedUser();
+        if (!active) return;
+        if (cachedUser) {
+          // Keep the local session available so previously saved tickets and QR codes
+          // remain accessible when the device has no connection. Server-protected
+          // actions will still fail safely until connectivity returns.
+          setSessionToken(token);
+          setUser(cachedUser);
+        } else {
+          await SecureStore.deleteItemAsync(SESSION_KEY);
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -64,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function saveSession(token: string, nextUser: OutNowUser) {
     await SecureStore.setItemAsync(SESSION_KEY, token);
+    await cacheUser(nextUser);
     setSessionToken(token);
     setUser(nextUser);
     void registerRemotePush(token).catch(() => undefined);
@@ -77,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionToken,
     );
     setUser(data.user);
+    await cacheUser(data.user);
   }
 
   async function signOut() {
@@ -84,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSessionToken(null);
     setUser(null);
     await SecureStore.deleteItemAsync(SESSION_KEY);
+    await SecureStore.deleteItemAsync(USER_KEY);
 
     if (token) {
       try {
