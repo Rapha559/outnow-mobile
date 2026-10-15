@@ -1,15 +1,22 @@
 import * as WebBrowser from 'expo-web-browser';
 
-import { API_BASE } from '@/lib/api';
+import { API_BASE, apiRequest } from '@/lib/api';
 
 type GoogleMode='login'|'signup';
 type GoogleRole='CUSTOMER'|'PROMOTER';
 
-export type MobileGoogleResult={
-  challengeToken:string;
+type OutNowUser={
+  id:string;
+  name:string;
   email:string;
+  phone?:string|null;
   role:GoogleRole;
-  mode:GoogleMode;
+};
+
+export type MobileGoogleResult={
+  sessionToken:string;
+  expiresAt:string;
+  user:OutNowUser;
   redirect?:string;
 };
 
@@ -34,15 +41,18 @@ export async function startMobileGoogleAuth(input:{mode:GoogleMode;role?:GoogleR
       google_not_configured:'Google sign-in is not configured yet.',
       google_token_failed:'Google could not complete sign-in. Please try again.',
       google_account_invalid:'Google could not verify this account.',
+      google_auth_failed:'Google sign-in failed. Please try again.',
     };
     throw new Error(messages[error]||'Google sign-in failed. Please try again.');
   }
 
   const challengeToken=callback.searchParams.get('challengeToken')||'';
-  const email=callback.searchParams.get('email')||'';
-  const role=callback.searchParams.get('role')==='PROMOTER'?'PROMOTER':'CUSTOMER';
-  const mode=callback.searchParams.get('mode')==='signup'?'signup':'login';
-  const redirect=callback.searchParams.get('redirect')||undefined;
-  if(!challengeToken||!email)throw new Error('Google sign-in did not return a valid verification session.');
-  return {challengeToken,email,role,mode,redirect} as MobileGoogleResult;
+  if(!/^g_[a-f0-9]{64}$/i.test(challengeToken)){
+    throw new Error('Google sign-in did not return a valid session.');
+  }
+
+  return apiRequest<MobileGoogleResult>('/api/mobile/auth/google/complete',{
+    method:'POST',
+    body:JSON.stringify({challengeToken}),
+  });
 }
