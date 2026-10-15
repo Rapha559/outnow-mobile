@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -21,6 +22,16 @@ type NotificationResponse = {
   unreadCount: number;
   notifications: NotificationItem[];
 };
+
+async function syncPhoneBadge(count: number) {
+  if (Constants.appOwnership === 'expo') return;
+  try {
+    const Notifications = await import('expo-notifications');
+    await Notifications.setBadgeCountAsync(Math.max(0, count));
+  } catch {
+    // Some Android launchers do not support app icon badges. The in-app count still works.
+  }
+}
 
 function timeLabel(value: string) {
   const date = new Date(value);
@@ -55,12 +66,17 @@ export default function NotificationsScreen() {
   const [filter, setFilter] = useState<'ALL' | 'UNREAD'>('ALL');
 
   const load = useCallback(async (refresh = false) => {
-    if (!sessionToken) { setLoading(false); return; }
+    if (!sessionToken) {
+      setLoading(false);
+      void syncPhoneBadge(0);
+      return;
+    }
     try {
       refresh ? setRefreshing(true) : setLoading(true);
       setError('');
       const next = await apiRequest<NotificationResponse>('/api/mobile/notifications', {}, sessionToken);
       setData(next);
+      void syncPhoneBadge(next.unreadCount);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load notifications.');
     } finally {
@@ -78,11 +94,13 @@ export default function NotificationsScreen() {
 
   async function markRead(item: NotificationItem) {
     if (!sessionToken || item.readAt) return;
+    const nextUnreadCount = Math.max(0, (data?.unreadCount || 0) - 1);
     setData((current) => current ? {
       ...current,
       unreadCount: Math.max(0, current.unreadCount - 1),
       notifications: current.notifications.map((entry) => entry.id === item.id ? { ...entry, readAt: new Date().toISOString() } : entry),
     } : current);
+    void syncPhoneBadge(nextUnreadCount);
     try {
       await apiRequest('/api/mobile/notifications', { method: 'PATCH', body: JSON.stringify({ id: item.id }) }, sessionToken);
     } catch {
@@ -94,6 +112,7 @@ export default function NotificationsScreen() {
     if (!sessionToken || !data?.unreadCount) return;
     const now = new Date().toISOString();
     setData((current) => current ? { ...current, unreadCount: 0, notifications: current.notifications.map((item) => ({ ...item, readAt: item.readAt || now })) } : current);
+    void syncPhoneBadge(0);
     try {
       await apiRequest('/api/mobile/notifications', { method: 'PATCH', body: JSON.stringify({ markAll: true }) }, sessionToken);
     } catch {
@@ -108,7 +127,11 @@ export default function NotificationsScreen() {
     const ticketId = typeof item.data?.ticketId === 'string' ? item.data.ticketId : '';
     if (ticketId) { router.push(`/ticket/${ticketId}` as never); return; }
     const eventId = typeof item.data?.eventId === 'string' ? item.data.eventId : '';
-    if (eventId) { router.push(`/event/${eventId}` as never); }
+    if (eventId) { router.push(`/event/${eventId}` as never); return; }
+    const orderId = typeof item.data?.orderId === 'string' ? item.data.orderId : '';
+    if (orderId) { router.push(`/customer/orders?orderId=${encodeURIComponent(orderId)}` as never); return; }
+    const transferToken = typeof item.data?.transferToken === 'string' ? item.data.transferToken : '';
+    if (transferToken) { router.push(`/tickets/transfer/accept?token=${encodeURIComponent(transferToken)}` as never); }
   }
 
   if (!user) {
