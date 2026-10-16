@@ -10,7 +10,7 @@ type SettingsItem = {
   subtitle: string;
   icon: string;
   promoterOnly?: boolean;
-  route?: '/legal';
+  route?: '/legal' | '/promoter/taxpayer';
 };
 
 const ITEMS: SettingsItem[] = [
@@ -21,7 +21,7 @@ const ITEMS: SettingsItem[] = [
   { key: 'audience-privacy', label: 'Audience & privacy', subtitle: 'Marketing choices and personalisation', icon: '♙' },
   { key: 'legal', label: 'Legal, privacy & refunds', subtitle: 'Refund guidance, ticketing terms, privacy and account rights', icon: '§', route: '/legal' },
   { key: 'payments-payouts', label: 'Payments & payouts', subtitle: 'Stripe connection, balances and payout readiness', icon: '▭', promoterOnly: true },
-  { key: 'taxpayer-info', label: 'Taxpayer info', subtitle: 'Seller, tax residence and VAT details', icon: '▤', promoterOnly: true },
+  { key: 'taxpayer-info', label: 'Taxpayer info', subtitle: 'Edit UK seller, identity, tax and VAT details', icon: '▤', promoterOnly: true, route: '/promoter/taxpayer' },
   { key: 'security-alerts', label: 'Security alerts', subtitle: 'Account protection and session security', icon: '♢' },
   { key: 'password', label: 'Password', subtitle: 'Create or change your password', icon: '▣' },
   { key: 'account-controls', label: 'Account controls', subtitle: 'Sign out, support and account deletion requests', icon: '◇' },
