@@ -4,7 +4,7 @@
     "slug": "outnow-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/outnow-logo.jpg",
+    "icon": "./assets/images/icon.png",
     "scheme": "outnowtickets",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -24,7 +24,9 @@
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#050505",
-        "foregroundImage": "./assets/images/outnow-logo.jpg"
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "intentFilters": [
         {
