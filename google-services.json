@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "395566670599",
+    "project_id": "outnow-tickets",
+    "storage_bucket": "outnow-tickets.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:395566670599:android:b229edd6940f6169bf5ba2",
+        "android_client_info": {
+          "package_name": "com.outnowtickets.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAg7HmcHO2wIfUEHmNV7FtIhVEXs7BiQOw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
