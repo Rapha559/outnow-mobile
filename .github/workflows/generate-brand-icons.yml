@@ -26,7 +26,7 @@ jobs:
         run: npm install --no-save --ignore-scripts sharp
 
       - name: Download real OutNow PNG source
-        run: curl -L --fail https://raw.githubusercontent.com/Rapha559/outnow/main/public/icon.png -o assets/images/outnow-source.png
+        run: curl -L --fail https://www.outnowtickets.com/icon.png -o assets/images/outnow-source.png
 
       - name: Generate icon assets
         run: node scripts/generate-brand-icons.mjs
