@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -189,10 +189,10 @@ export default function PromoterTaxpayerScreen() {
   </ScrollView></SafeAreaView></View>;
 }
 
-function Section({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
+function Section({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return <View style={styles.section}><Text style={styles.sectionTitle}>{title}</Text><Text style={styles.sectionSub}>{subtitle}</Text>{children}</View>;
 }
-function Field(props: React.ComponentProps<typeof TextInput> & { label: string }) {
+function Field(props: ComponentProps<typeof TextInput> & { label: string }) {
   const { label, ...inputProps } = props;
   return <View style={styles.field}><Text style={styles.label}>{label}</Text><TextInput {...inputProps} placeholderTextColor="#9ca3af" style={styles.input} /></View>;
 }
