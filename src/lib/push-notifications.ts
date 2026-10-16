@@ -35,6 +35,7 @@ async function ensureAndroidChannel(notifications: NotificationsModule){
     name:'OutNow updates',
     importance:notifications.AndroidImportance.HIGH,
     vibrationPattern:[0,250,150,250],
+    showBadge:true,
   });
 }
 
