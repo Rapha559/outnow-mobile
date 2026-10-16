@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 import { mkdir } from 'node:fs/promises';
 
-const source = process.env.OUTNOW_ICON_SOURCE || 'assets/images/outnow-source.png';
+const source = 'assets/images/outnow-app-logo.jpg';
 const iconPath = 'assets/images/icon.png';
 const foregroundPath = 'assets/images/android-icon-foreground.png';
 
@@ -46,4 +46,4 @@ await sharp({
   .png()
   .toFile(foregroundPath);
 
-console.log(`Generated OutNow app icon assets from ${source}`);
+console.log('Generated OutNow app icon assets from assets/images/outnow-app-logo.jpg');
