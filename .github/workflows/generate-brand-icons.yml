@@ -1,0 +1,45 @@
+name: Generate OutNow brand icons
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'assets/images/outnow-logo.jpg'
+      - 'scripts/generate-brand-icons.mjs'
+      - '.github/workflows/generate-brand-icons.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Sharp
+        run: npm install --no-save --ignore-scripts sharp
+
+      - name: Generate icon assets
+        run: node scripts/generate-brand-icons.mjs
+
+      - name: Validate Expo config
+        run: npx expo-doctor
+
+      - name: Commit generated icons
+        run: |
+          if git diff --quiet -- assets/images/icon.png assets/images/android-icon-foreground.png; then
+            echo "Icon assets are already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/images/icon.png assets/images/android-icon-foreground.png
+          git commit -m "Generate app icons from OutNow logo"
+          git push
