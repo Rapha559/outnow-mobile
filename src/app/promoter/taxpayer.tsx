@@ -9,7 +9,7 @@ import { apiRequest } from '@/lib/api';
 type AccountType = 'INDIVIDUAL' | 'SOLE_TRADER' | 'COMPANY';
 type VerificationState = 'VERIFIED' | 'REVIEW_REQUIRED' | 'FAILED' | 'NOT_APPLICABLE';
 type VerificationCheck = { state: VerificationState; label: string; message: string };
-type VerificationSummary = { overall: VerificationState; company: VerificationCheck; vat: VerificationCheck; identity: VerificationCheck };
+type VerificationSummary = { overall: VerificationState; company: VerificationCheck; vat: VerificationCheck; nationalInsurance: VerificationCheck; identity: VerificationCheck };
 type TaxpayerInfo = {
   accountType: AccountType;
   legalName: string;
@@ -148,7 +148,7 @@ export default function PromoterTaxpayerScreen() {
     <Text style={styles.title}>Taxpayer Information</Text>
     <Text style={styles.copy}>Provide the legal and tax details for the UK seller receiving ticket income through OutNow. Sensitive identifiers are masked after saving.</Text>
 
-    {!!verification && <View style={styles.verificationCard}><Text style={styles.verifyLabel}>VERIFICATION STATUS</Text><Text style={styles.verifyTitle}>{stateLabel(verification.overall)}</Text><VerificationRow check={verification.company} /><VerificationRow check={verification.vat} /><VerificationRow check={verification.identity} /></View>}
+    {!!verification && <View style={styles.verificationCard}><Text style={styles.verifyLabel}>VERIFICATION STATUS</Text><Text style={styles.verifyTitle}>{stateLabel(verification.overall)}</Text><VerificationRow check={verification.company} /><VerificationRow check={verification.vat} /><VerificationRow check={verification.nationalInsurance} /><VerificationRow check={verification.identity} /></View>}
     {!!error && <View style={styles.errorBox}><Text style={styles.error}>{error}</Text></View>}
     {!!message && <View style={styles.successBox}><Text style={styles.success}>{message}</Text></View>}
 
