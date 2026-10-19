@@ -21,6 +21,15 @@ export default function LoginScreen(){
   const {saveSession}=useAuth();
   const [email,setEmail]=useState('');const [password,setPassword]=useState('');const [loading,setLoading]=useState(false);const [googleLoading,setGoogleLoading]=useState(false);const [appleLoading,setAppleLoading]=useState(false);const [appleAvailable,setAppleAvailable]=useState(false);const [error,setError]=useState('');
   useEffect(()=>{if(Platform.OS==='ios')void isAppleSignInAvailable().then(setAppleAvailable);},[]);
+
+  function goBack(){
+    if(router.canGoBack()){
+      router.back();
+      return;
+    }
+    router.replace('/(tabs)');
+  }
+
   async function submit(){if(!email.trim()||!password){setError('Enter your email and password.');return;}try{setLoading(true);setError('');const data=await apiRequest<LoginResponse>('/api/mobile/auth/login',{method:'POST',body:JSON.stringify({email,password,rememberMe:true})});router.replace({pathname:'/verify',params:{mode:'login',challengeToken:data.challengeToken,maskedEmail:data.email,...(params.redirect?{redirect:params.redirect}:{})}});}catch(err){setError(err instanceof Error?err.message:'Unable to sign in.');}finally{setLoading(false);}}
   async function googleSignIn(){
     try{
@@ -46,7 +55,7 @@ export default function LoginScreen(){
   async function appleSignIn(){try{setAppleLoading(true);setError('');const result=await startAppleAuth({mode:'login'});router.replace({pathname:'/verify',params:{mode:'login',challengeToken:result.challengeToken,maskedEmail:result.email,...(params.redirect?{redirect:params.redirect}:{})}});}catch(err){const message=err instanceof Error?err.message:'Apple sign-in failed.';if(!message.includes('ERR_REQUEST_CANCELED'))setError(message);}finally{setAppleLoading(false);}}
   const busy=loading||googleLoading||appleLoading;
   return <View style={styles.screen}><SafeAreaView style={styles.safeArea}><KeyboardAvoidingView style={styles.flex} behavior={Platform.OS==='ios'?'padding':undefined}><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-    <View style={styles.topRow}><Pressable style={styles.back} onPress={()=>router.back()}><Text style={styles.backText}>‹</Text></Pressable><Text style={styles.brand}>OUTNOW</Text><View style={styles.spacer}/></View>
+    <View style={styles.topRow}><Pressable style={styles.back} onPress={goBack}><Text style={styles.backText}>‹</Text></Pressable><Text style={styles.brand}>OUTNOW</Text><View style={styles.spacer}/></View>
     <Text style={styles.eyebrow}>WELCOME BACK</Text><Text style={styles.title}>Sign in to OutNow</Text><Text style={styles.copy}>Access your tickets, orders and account from the app.</Text>
     <Pressable disabled={busy} style={[styles.google,busy&&styles.disabled]} onPress={()=>void googleSignIn()}>{googleLoading?<ActivityIndicator color="#111827"/>:<><Text style={styles.googleMark}>G</Text><Text style={styles.googleText}>Continue with Google</Text></>}</Pressable>
     {appleAvailable&&<View style={[styles.appleWrap,busy&&styles.disabled]}>{appleLoading?<View style={styles.appleLoading}><ActivityIndicator color="#fff"/></View>:<AppleAuthentication.AppleAuthenticationButton buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN} buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK} cornerRadius={14} style={styles.appleButton} onPress={()=>void appleSignIn()}/>}</View>}
