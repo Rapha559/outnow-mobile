@@ -45,6 +45,26 @@ export default function VerifyScreen() {
 
   const mode = params.mode === 'signup' ? 'signup' : 'login';
 
+  function goBackSafely() {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    if (mode === 'signup') {
+      router.replace({
+        pathname: '/signup',
+        params: params.redirect ? { redirect: params.redirect } : {},
+      });
+      return;
+    }
+
+    router.replace({
+      pathname: '/login',
+      params: params.redirect ? { redirect: params.redirect } : {},
+    });
+  }
+
   async function verify() {
     if (!/^[0-9]{6}$/.test(code)) {
       setError('Enter the 6-digit code from your email.');
@@ -108,7 +128,7 @@ export default function VerifyScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
           <View style={styles.topRow}>
-            <Pressable style={styles.back} onPress={() => router.back()}><Text style={styles.backText}>‹</Text></Pressable>
+            <Pressable style={styles.back} onPress={goBackSafely}><Text style={styles.backText}>‹</Text></Pressable>
             <Text style={styles.brand}>OUTNOW</Text>
             <View style={styles.spacer} />
           </View>
