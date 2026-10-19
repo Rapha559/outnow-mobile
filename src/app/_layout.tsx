@@ -7,6 +7,7 @@ import { useColorScheme } from 'react-native';
 
 import { AppErrorBoundary } from '@/components/app-error-boundary';
 import { AppLaunchIntro } from '@/components/app-launch-intro';
+import { PromoterEventWaitlistEditor } from '@/components/promoter-event-waitlist-editor';
 import { StaffScannerShortcut } from '@/components/staff-scanner-shortcut';
 import { AuthProvider } from '@/context/auth-context';
 import { installSystemThemePreprocessors, setSystemThemeScheme, systemThemeColors } from '@/lib/system-theme';
@@ -107,6 +108,7 @@ export default function RootLayout(){
       <Stack.Screen name="promoter/dashboard"/><Stack.Screen name="promoter/analytics"/><Stack.Screen name="promoter/events"/><Stack.Screen name="promoter/create-event"/><Stack.Screen name="promoter/scanner"/>
     </Stack>
     <StaffScannerShortcut/>
+    <PromoterEventWaitlistEditor/>
     {showLaunchIntro&&<AppLaunchIntro onFinish={finishLaunchIntro}/>} 
   </AuthProvider></AppErrorBoundary>;
 }
