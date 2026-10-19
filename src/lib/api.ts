@@ -4,6 +4,39 @@ export const API_BASE = 'https://www.outnowtickets.com';
 
 const inFlightCheckoutRequests = new Map<string, Promise<unknown>>();
 
+type UnauthorizedHandler = () => void | Promise<void>;
+let unauthorizedHandler: UnauthorizedHandler | null = null;
+let handlingUnauthorized = false;
+
+export class ApiRequestError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.status = status;
+  }
+}
+
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | null) {
+  unauthorizedHandler = handler;
+}
+
+function shouldHandleUnauthorized(path: string, sessionToken?: string | null) {
+  if (!sessionToken) return false;
+
+  // These routes can legitimately return 401 while the user is trying to
+  // authenticate, so they must not trigger a global session-ended flow.
+  return ![
+    '/api/mobile/auth/login',
+    '/api/mobile/auth/login/verify',
+    '/api/mobile/auth/signup',
+    '/api/mobile/auth/google',
+    '/api/mobile/auth/apple',
+    '/api/mobile/auth/logout',
+  ].some((authPath) => path === authPath || path.startsWith(`${authPath}/`));
+}
+
 async function performRequest<T>(
   path: string,
   options: RequestInit = {},
@@ -28,7 +61,24 @@ async function performRequest<T>(
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(data?.error || data?.message || 'Something went wrong. Please try again.');
+    if (
+      response.status === 401 &&
+      shouldHandleUnauthorized(path, sessionToken) &&
+      unauthorizedHandler &&
+      !handlingUnauthorized
+    ) {
+      handlingUnauthorized = true;
+      try {
+        await unauthorizedHandler();
+      } finally {
+        handlingUnauthorized = false;
+      }
+    }
+
+    throw new ApiRequestError(
+      data?.error || data?.message || 'Something went wrong. Please try again.',
+      response.status,
+    );
   }
 
   if (path === '/api/mobile/social/discovery' && String(options.method || 'GET').toUpperCase() === 'POST') {
