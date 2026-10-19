@@ -78,6 +78,20 @@ export default function StaffHomeScreen() {
     if (!authLoading) void load();
   }, [authLoading, load]);
 
+  function goBackSafely() {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    if (user?.role === 'PROMOTER') {
+      router.replace('/promoter/dashboard');
+      return;
+    }
+
+    router.replace('/(tabs)/profile');
+  }
+
   if (authLoading || loading) {
     return <View style={[styles.screen, { backgroundColor: colors.bg }]}><SafeAreaView style={styles.center}><ActivityIndicator size="large" color="#7c3aed" /></SafeAreaView></View>;
   }
@@ -91,7 +105,7 @@ export default function StaffHomeScreen() {
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor="#7c3aed" />}>
           <View style={styles.top}>
-            <Pressable style={[styles.circle, { borderColor: colors.border, backgroundColor: colors.soft }]} onPress={() => router.back()}><Text style={[styles.back, { color: colors.text }]}>‹</Text></Pressable>
+            <Pressable style={[styles.circle, { borderColor: colors.border, backgroundColor: colors.soft }]} onPress={goBackSafely}><Text style={[styles.back, { color: colors.text }]}>‹</Text></Pressable>
             <Text style={[styles.topTitle, { color: colors.text }]}>Staff Scanner</Text>
             <View style={{ width: 40 }} />
           </View>
