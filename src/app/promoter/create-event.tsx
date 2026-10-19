@@ -54,6 +54,13 @@ export default function CreateEventScreen() {
   const [ticketTaxTreatment, setTicketTaxTreatment] = useState<TaxTreatment>('UK_STANDARD');
   const [taxQualificationConfirmed,setTaxQualificationConfirmed]=useState(false);
   const [tickets, setTickets] = useState<TicketDraft[]>([newTicket()]);
+  const [salesStart, setSalesStart] = useState('');
+  const [salesEnd, setSalesEnd] = useState('');
+  const [waitlistEnabled, setWaitlistEnabled] = useState(false);
+  const [waitlistOpensAt, setWaitlistOpensAt] = useState('');
+  const [waitlistClosesAt, setWaitlistClosesAt] = useState('');
+  const [waitlistNotifyOnSale, setWaitlistNotifyOnSale] = useState(true);
+  const [waitlistMessage, setWaitlistMessage] = useState('Join the waitlist to be notified when tickets go on sale.');
 
   useEffect(() => {
     if (!sessionToken || user?.role !== 'PROMOTER') { setLoadingCategories(false); return; }
@@ -97,6 +104,7 @@ export default function CreateEventScreen() {
     if (!title.trim() || !description.trim() || !category || !eventDate || !startTime || !venue.trim() || !address.trim() || !city.trim() || !postcode.trim()) { setError('Complete all required event fields.'); return; }
     if (tickets.some((ticket) => !ticket.name.trim() || !ticket.price || !ticket.quantity)) { setError('Every ticket needs a name, price and quantity.'); return; }
     if(taxProfile.vatRegistered&&ticketTaxTreatment!=='UK_STANDARD'&&!taxQualificationConfirmed){setError('Confirm that this event qualifies for the selected non-standard VAT treatment.');return;}
+    if(waitlistEnabled&&!salesStart.trim()){setError('Set a future ticket sales start time before enabling the event waitlist.');return;}
 
     try {
       setSubmitting(true); setError('');
@@ -105,7 +113,8 @@ export default function CreateEventScreen() {
         body: JSON.stringify({
           title, description, ageRestriction, headlinerName, headlinerImageUrl, category, eventDate, startTime, doorsOpenTime, endTime,
           venue, address, city, postcode, image, refundPolicy, ticketTaxTreatment:'UK_STANDARD'===ticketTaxTreatment||taxProfile.vatRegistered?ticketTaxTreatment:'UK_STANDARD',taxQualificationConfirmed,
-          tickets: tickets.map(({ id: _id, ...ticket }) => ticket),
+          salesStart:salesStart.trim(),salesEnd:salesEnd.trim(),waitlistEnabled,waitlistOpensAt:waitlistOpensAt.trim(),waitlistClosesAt:waitlistClosesAt.trim(),waitlistNotifyOnSale,waitlistMessage:waitlistMessage.trim(),
+          tickets: tickets.map(({ id: _id, ...ticket }) => ({...ticket,saleStarts:salesStart.trim(),saleEnds:salesEnd.trim()})),
         }),
       }, sessionToken);
       router.replace('/promoter/events');
@@ -123,7 +132,7 @@ export default function CreateEventScreen() {
 
   return <View style={styles.screen}><SafeAreaView edges={['top']} style={styles.safeArea}><KeyboardAvoidingView style={styles.safeArea} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
     <View style={styles.topBar}><Pressable style={styles.back} onPress={() => router.back()}><Text style={styles.backText}>‹</Text></Pressable><Text style={styles.topTitle}>Create Event</Text><View style={styles.spacer} /></View>
-    <Text style={styles.eyebrow}>PROMOTER PORTAL</Text><Text style={styles.title}>Create a new event</Text><Text style={styles.copy}>Add the event, headliner, images and ticket details. It will then be sent to OutNow admin for review.</Text>
+    <Text style={styles.eyebrow}>PROMOTER PORTAL</Text><Text style={styles.title}>Create a new event</Text><Text style={styles.copy}>Add the event, headliner, images, tickets and pre-sale setup. It will then be sent to OutNow admin for review.</Text>
 
     <Section title="Event details"><Field label="Event title *" value={title} onChangeText={setTitle} placeholder="Summer Rooftop Party"/><Field label="Description *" value={description} onChangeText={setDescription} placeholder="Tell customers what to expect" multiline/><Field label="Age restriction" value={ageRestriction} onChangeText={setAgeRestriction} placeholder="18+ or all"/></Section>
 
@@ -133,6 +142,24 @@ export default function CreateEventScreen() {
     <Section title="Date & time"><Field label="Event date *" value={eventDate} onChangeText={setEventDate} placeholder="YYYY-MM-DD"/><View style={styles.twoCol}><View style={styles.flex}><Field label="Start *" value={startTime} onChangeText={setStartTime} placeholder="19:30"/></View><View style={styles.flex}><Field label="Doors" value={doorsOpenTime} onChangeText={setDoorsOpenTime} placeholder="18:30"/></View></View><Field label="End time" value={endTime} onChangeText={setEndTime} placeholder="23:30"/></Section>
     <Section title="Venue & location"><Field label="Venue *" value={venue} onChangeText={setVenue} placeholder="Venue name"/><Field label="Address *" value={address} onChangeText={setAddress} placeholder="Street address"/><View style={styles.twoCol}><View style={styles.flex}><Field label="City *" value={city} onChangeText={setCity} placeholder="London"/></View><View style={styles.flex}><Field label="Postcode *" value={postcode} onChangeText={setPostcode} placeholder="SW1A 1AA"/></View></View></Section>
     <Section title="Cover image">{!!image&&<Image source={{uri:image}} style={styles.coverPreview} contentFit="cover"/>}<Pressable disabled={uploadingImage} style={styles.imageButton} onPress={() => void chooseImage()}>{uploadingImage?<ActivityIndicator color="#7c3aed"/>:<Text style={styles.imageButtonText}>{image?'Replace cover photo':'Choose cover photo from phone'}</Text>}</Pressable>{image?<Text style={styles.uploaded}>✓ Cover photo uploaded securely</Text>:<Text style={styles.helper}>JPG, PNG or WEBP, up to 10 MB.</Text>}</Section>
+
+    <Section title="Ticket sales & event waitlist">
+      <Text style={styles.helper}>For a future event, set when ticket sales open. You can collect interest before that time with the event pre-sale waitlist.</Text>
+      <Field label="Ticket sales start" value={salesStart} onChangeText={setSalesStart} placeholder="YYYY-MM-DDTHH:mm" autoCapitalize="none"/>
+      <Field label="Ticket sales end (optional)" value={salesEnd} onChangeText={setSalesEnd} placeholder="YYYY-MM-DDTHH:mm" autoCapitalize="none"/>
+      <Pressable style={[styles.toggleCard,waitlistEnabled&&styles.toggleCardActive]} onPress={()=>setWaitlistEnabled((value)=>!value)}>
+        <View style={{flex:1}}><Text style={styles.toggleTitle}>Enable event pre-sale waitlist</Text><Text style={styles.helper}>Customers can join before tickets go on sale. This is separate from the sold-out ticket waitlist.</Text></View><Text style={styles.toggleMark}>{waitlistEnabled?'✓':'○'}</Text>
+      </Pressable>
+      {waitlistEnabled&&<View style={styles.waitlistBox}>
+        <Field label="Waitlist opens (optional)" value={waitlistOpensAt} onChangeText={setWaitlistOpensAt} placeholder="YYYY-MM-DDTHH:mm" autoCapitalize="none"/>
+        <Field label="Waitlist closes (optional)" value={waitlistClosesAt} onChangeText={setWaitlistClosesAt} placeholder="Leave blank to close when sales open" autoCapitalize="none"/>
+        <Field label="Customer message" value={waitlistMessage} onChangeText={setWaitlistMessage} placeholder="Join the waitlist to be notified when tickets go on sale." multiline maxLength={500}/>
+        <Pressable style={[styles.toggleCard,waitlistNotifyOnSale&&styles.toggleCardActive]} onPress={()=>setWaitlistNotifyOnSale((value)=>!value)}>
+          <View style={{flex:1}}><Text style={styles.toggleTitle}>Notify when tickets go on sale</Text><Text style={styles.helper}>OutNow will email the waitlist and send push/in-app alerts to eligible signed-in users.</Text></View><Text style={styles.toggleMark}>{waitlistNotifyOnSale?'✓':'○'}</Text>
+        </Pressable>
+        <View style={styles.rulesBox}><Text style={styles.rulesTitle}>Waitlist rules</Text><Text style={styles.rulesText}>• Sales start must be in the future.</Text><Text style={styles.rulesText}>• Waitlist opening must be before sales start.</Text><Text style={styles.rulesText}>• Waitlist closing cannot be after sales start.</Text><Text style={styles.rulesText}>• Joining does not reserve or guarantee a ticket.</Text></View>
+      </View>}
+    </Section>
 
     <Section title="Ticket settings">
       <Text style={styles.helper}>Your saved promoter defaults are applied automatically when this screen opens.</Text>
@@ -158,6 +185,7 @@ const styles=StyleSheet.create({
   eyebrow:{color:'#7c3aed',fontSize:11,fontWeight:'900',letterSpacing:1.8,marginTop:12},title:{color:'#111827',fontSize:34,lineHeight:40,fontWeight:'900',marginTop:8},copy:{color:'#6b7280',fontSize:14,lineHeight:22,marginTop:10},
   section:{marginTop:28,borderRadius:20,borderWidth:1,borderColor:'#e5e7eb',backgroundColor:'#fff',padding:16},sectionHeader:{marginTop:28,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},sectionTitle:{color:'#111827',fontSize:19,fontWeight:'900',marginBottom:10},field:{marginTop:10},label:{color:'#374151',fontSize:12,fontWeight:'800',marginBottom:7},input:{minHeight:50,borderRadius:14,borderWidth:1,borderColor:'#d1d5db',backgroundColor:'#f9fafb',color:'#111827',paddingHorizontal:14,fontSize:15},textarea:{minHeight:110,paddingTop:13,textAlignVertical:'top'},twoCol:{flexDirection:'row',gap:10},flex:{flex:1},
   chips:{flexDirection:'row',flexWrap:'wrap',gap:8,marginTop:7},chip:{borderRadius:999,borderWidth:1,borderColor:'#d1d5db',backgroundColor:'#f9fafb',paddingHorizontal:12,paddingVertical:9},chipSelected:{borderColor:'#7c3aed',backgroundColor:'#f3efff'},chipText:{color:'#4b5563',fontSize:12,fontWeight:'700'},chipTextSelected:{color:'#7c3aed'},smallLabel:{color:'#374151',fontSize:12,fontWeight:'800',marginTop:13},helper:{color:'#6b7280',fontSize:11,lineHeight:17,marginTop:9},
+  toggleCard:{marginTop:12,borderRadius:15,borderWidth:1,borderColor:'#d1d5db',backgroundColor:'#f9fafb',padding:13,flexDirection:'row',alignItems:'center',gap:12},toggleCardActive:{borderColor:'#7c3aed',backgroundColor:'#faf5ff'},toggleTitle:{color:'#111827',fontSize:13,fontWeight:'900'},toggleMark:{color:'#7c3aed',fontSize:22,fontWeight:'900'},waitlistBox:{marginTop:12,borderRadius:16,borderWidth:1,borderColor:'#e9d5ff',backgroundColor:'#fcfaff',padding:12},rulesBox:{marginTop:12,borderRadius:13,backgroundColor:'#f3f4f6',padding:12},rulesTitle:{color:'#111827',fontSize:12,fontWeight:'900',marginBottom:5},rulesText:{color:'#4b5563',fontSize:11,lineHeight:18},
   confirmBox:{marginTop:12,borderRadius:14,borderWidth:1,borderColor:'#d1d5db',padding:12,flexDirection:'row',gap:10,backgroundColor:'#f9fafb'},confirmBoxSelected:{borderColor:'#7c3aed',backgroundColor:'#faf5ff'},confirmMark:{color:'#7c3aed',fontSize:18,fontWeight:'900'},confirmText:{flex:1,color:'#4b5563',fontSize:11,lineHeight:17,fontWeight:'700'},noVatBox:{marginTop:10,borderRadius:14,backgroundColor:'#f9fafb',borderWidth:1,borderColor:'#e5e7eb',padding:12},noVatTitle:{color:'#111827',fontSize:13,fontWeight:'900'},vatBreakdown:{marginTop:10,borderRadius:14,borderWidth:1,borderColor:'#e9d5ff',backgroundColor:'#faf5ff',padding:12},vatBreakdownTitle:{color:'#7c3aed',fontSize:12,fontWeight:'900',marginBottom:6},vatLine:{color:'#4b5563',fontSize:11,lineHeight:17},
   headlinerRow:{flexDirection:'row',alignItems:'center',gap:14,marginTop:14},headlinerImage:{width:88,height:88,borderRadius:44,backgroundColor:'#f3f4f6'},headlinerFallback:{width:88,height:88,borderRadius:44,backgroundColor:'#f3efff',alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:'#ddd6fe'},headlinerFallbackText:{color:'#7c3aed',fontSize:30,fontWeight:'900'},headlinerActions:{flex:1},
   coverPreview:{width:'100%',aspectRatio:16/9,borderRadius:16,backgroundColor:'#f3f4f6',marginTop:6},imageButton:{minHeight:48,borderRadius:14,borderWidth:1,borderColor:'#7c3aed',backgroundColor:'#faf8ff',alignItems:'center',justifyContent:'center',marginTop:10,paddingHorizontal:12},imageButtonText:{color:'#7c3aed',fontWeight:'900',textAlign:'center'},uploaded:{color:'#15803d',fontSize:12,fontWeight:'800',marginTop:9},
