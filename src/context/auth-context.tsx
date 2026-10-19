@@ -1,7 +1,9 @@
 import * as SecureStore from 'expo-secure-store';
+import { router } from 'expo-router';
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { Alert } from 'react-native';
 
-import { apiRequest } from '@/lib/api';
+import { ApiRequestError, apiRequest, setUnauthorizedHandler } from '@/lib/api';
 import { registerRemotePush, unregisterRemotePush } from '@/lib/push-notifications';
 
 const SESSION_KEY = 'outnow_user_session';
@@ -49,6 +51,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  async function clearLocalSession() {
+    setSessionToken(null);
+    setUser(null);
+    await Promise.all([
+      SecureStore.deleteItemAsync(SESSION_KEY),
+      SecureStore.deleteItemAsync(USER_KEY),
+    ]);
+  }
+
+  useEffect(() => {
+    setUnauthorizedHandler(async () => {
+      await clearLocalSession();
+      router.replace('/login');
+      Alert.alert('Session ended', 'Your session has ended. Please sign in again.');
+    });
+
+    return () => {
+      setUnauthorizedHandler(null);
+    };
+  }, []);
+
   useEffect(() => {
     let active = true;
 
@@ -71,7 +94,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.user);
         await cacheUser(data.user);
         void registerRemotePush(token).catch(() => undefined);
-      } catch {
+      } catch (error) {
+        if (error instanceof ApiRequestError && error.status === 401) {
+          if (active) {
+            await clearLocalSession();
+          }
+          return;
+        }
+
         const cachedUser = await readCachedUser();
         if (!active) return;
         if (cachedUser) {
@@ -115,10 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signOut() {
     const token = sessionToken;
-    setSessionToken(null);
-    setUser(null);
-    await SecureStore.deleteItemAsync(SESSION_KEY);
-    await SecureStore.deleteItemAsync(USER_KEY);
+    await clearLocalSession();
 
     if (token) {
       try {
