@@ -1,5 +1,5 @@
 import { usePathname } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { type ComponentProps, useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -172,7 +172,7 @@ export function PromoterEventWaitlistEditor() {
   </>;
 }
 
-function Field({ label, ...props }: { label: string } & React.ComponentProps<typeof TextInput>) {
+function Field({ label, ...props }: { label: string } & ComponentProps<typeof TextInput>) {
   return <View style={{ marginTop: 18 }}><Text style={styles.label}>{label}</Text><TextInput {...props} placeholderTextColor="#9ca3af" style={[styles.input, props.editable === false && styles.inputDisabled]} /></View>;
 }
 
