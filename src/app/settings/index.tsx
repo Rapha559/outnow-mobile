@@ -10,7 +10,7 @@ type SettingsItem = {
   subtitle: string;
   icon: string;
   promoterOnly?: boolean;
-  route?: '/legal' | '/promoter/taxpayer';
+  route?: '/legal' | '/cookies' | '/promoter/taxpayer';
 };
 
 const ITEMS: SettingsItem[] = [
@@ -20,6 +20,7 @@ const ITEMS: SettingsItem[] = [
   { key: 'event-defaults', label: 'Event defaults', subtitle: 'Refund and UK ticket VAT defaults', icon: '⌘', promoterOnly: true },
   { key: 'audience-privacy', label: 'Audience & privacy', subtitle: 'Marketing choices and personalisation', icon: '♙' },
   { key: 'legal', label: 'Legal, privacy & refunds', subtitle: 'Refund guidance, ticketing terms, privacy and account rights', icon: '§', route: '/legal' },
+  { key: 'cookies', label: 'Cookies & app storage', subtitle: 'Cookies, secure app storage, analytics and your choices', icon: '◌', route: '/cookies' },
   { key: 'payments-payouts', label: 'Payments & payouts', subtitle: 'Stripe connection, balances and payout readiness', icon: '▭', promoterOnly: true },
   { key: 'taxpayer-info', label: 'Taxpayer info', subtitle: 'Edit UK seller, identity, tax and VAT details', icon: '▤', promoterOnly: true, route: '/promoter/taxpayer' },
   { key: 'security-alerts', label: 'Security alerts', subtitle: 'Account protection and session security', icon: '♢' },
