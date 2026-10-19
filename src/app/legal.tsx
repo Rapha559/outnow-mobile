@@ -26,6 +26,11 @@ export default function LegalScreen(){
         <Pressable style={styles.linkButton} onPress={()=>void WebBrowser.openBrowserAsync(`${SITE}/privacy`)}><Text style={styles.linkText}>Read full Privacy Policy ↗</Text></Pressable>
       </Card>
 
+      <Card title="Cookies & app storage">
+        <Text style={styles.body}>OutNow uses secure session technology, app storage and similar technologies for sign-in, account security, preferences, notifications and core app functionality.</Text>
+        <Pressable style={styles.linkButton} onPress={()=>router.push('/cookies')}><Text style={styles.linkText}>Read Cookies & app storage →</Text></Pressable>
+      </Card>
+
       <Card title="Terms">
         <Text style={styles.body}>Tickets are sold for events listed on OutNow. Event-specific sale windows, refund rules, organiser terms, booking fees and eligibility requirements apply at checkout. Tickets must not be duplicated or misused and may be voided when refunded or transferred.</Text>
         <Text style={styles.body}>Promoters are responsible for accurate event information, lawful ticket sales and completing the seller, tax and payout information required by OutNow and Stripe.</Text>
