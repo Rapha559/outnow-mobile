@@ -247,6 +247,7 @@ export default function EventSeatSelector({ eventId, sessionToken, onSeatingChan
           accessibilityRole="button"
           accessibilityState={{ disabled: Boolean(hold) || unavailable || holding, selected }}
           disabled={Boolean(hold) || unavailable || holding}
+          hitSlop={7}
           onPress={() => toggleSeat(seat)}
           style={[styles.mapSeat, { left: `${left}%`, top: `${top}%`, backgroundColor: seatColour(seat, selected) }, seat.kind === 'TABLE' && styles.tableSeat, unavailable && styles.unavailableSeat, selected && styles.selectedSeat]}
         >
@@ -278,8 +279,8 @@ const styles = StyleSheet.create({
   mapCanvas: { height: 340, marginTop: 14, borderRadius: 15, borderWidth: 1, borderColor: '#ddd6fe', backgroundColor: '#111827', overflow: 'hidden', position: 'relative' },
   stage: { position: 'absolute', zIndex: 1, top: 0, left: '18%', right: '18%', height: 35, borderBottomLeftRadius: 42, borderBottomRightRadius: 42, backgroundColor: '#312e81', alignItems: 'center', justifyContent: 'center' },
   stageText: { color: '#fff', fontSize: 11, fontWeight: '900', letterSpacing: 1.5 },
-  mapSeat: { position: 'absolute', width: 24, height: 24, marginLeft: -12, marginTop: -12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,.65)', alignItems: 'center', justifyContent: 'center' },
-  tableSeat: { borderRadius: 6 }, unavailableSeat: { opacity: 0.45 }, selectedSeat: { borderColor: '#fff', borderWidth: 2, shadowColor: '#a78bfa', shadowOpacity: 0.9, shadowRadius: 5, elevation: 3 }, mapSeatText: { color: '#fff', fontSize: 10, fontWeight: '900' },
+  mapSeat: { position: 'absolute', width: 10, height: 10, marginLeft: -5, marginTop: -5, borderRadius: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,.7)', alignItems: 'center', justifyContent: 'center' },
+  tableSeat: { borderRadius: 3 }, unavailableSeat: { opacity: 0.45 }, selectedSeat: { borderColor: '#fff', borderWidth: 2, shadowColor: '#a78bfa', shadowOpacity: 0.9, shadowRadius: 4, elevation: 3 }, mapSeatText: { color: '#fff', fontSize: 6, fontWeight: '900' },
   sectionChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 12 }, sectionChip: { borderRadius: 999, borderWidth: 1, borderColor: '#c4b5fd', backgroundColor: '#fff', paddingHorizontal: 10, paddingVertical: 6 }, sectionChipText: { color: '#5b21b6', fontSize: 10, fontWeight: '800' },
   summary: { marginTop: 14, borderRadius: 12, backgroundColor: '#fff', padding: 11, gap: 4 }, summaryText: { fontSize: 11, color: '#374151', fontWeight: '700' }, error: { marginTop: 10, color: '#dc2626', fontSize: 11, fontWeight: '800' },
   reserveButton: { height: 48, borderRadius: 13, backgroundColor: '#7c3aed', alignItems: 'center', justifyContent: 'center', marginTop: 14 }, reserveText: { color: '#fff', fontWeight: '900' }, disabled: { opacity: 0.45 },
