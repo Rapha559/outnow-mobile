@@ -104,16 +104,16 @@ export default function EventSeatSelector({ eventId, sessionToken, selectedTicke
   useEffect(() => {
     if (hold && secondsLeft === 0) {
       setHold(null);
-      setSelectedIds([]);
+      setSelectedIds(current => current.length ? [] : current);
       setError('Your seat hold expired. Please choose your seats again.');
       void loadSeating();
     }
-  }, [secondsLeft]);
+  }, [secondsLeft, hold]);
 
   useEffect(() => {
     if (!requiresSeats) {
-      setSelectedIds([]);
-      setHold(null);
+      setSelectedIds(current => current.length ? [] : current);
+      setHold(current => current ? null : current);
       onStateChange(EMPTY_STATE);
       return;
     }
@@ -160,7 +160,7 @@ export default function EventSeatSelector({ eventId, sessionToken, selectedTicke
       await loadSeating();
     } catch (err) {
       setHold(null);
-      setSelectedIds([]);
+      setSelectedIds(current => current.length ? [] : current);
       setError(err instanceof Error ? err.message : 'Unable to reserve those seats.');
       await loadSeating();
     } finally {
@@ -178,7 +178,7 @@ export default function EventSeatSelector({ eventId, sessionToken, selectedTicke
         body: JSON.stringify({ holdId: current.holdId, holdToken: current.holdToken }),
       }, sessionToken);
     } catch {}
-    setSelectedIds([]);
+    setSelectedIds(currentIds => currentIds.length ? [] : currentIds);
     await loadSeating();
   }
 
