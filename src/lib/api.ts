@@ -10,11 +10,13 @@ let handlingUnauthorized = false;
 
 export class ApiRequestError extends Error {
   status: number;
+  data: unknown;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, data: unknown = null) {
     super(message);
     this.name = 'ApiRequestError';
     this.status = status;
+    this.data = data;
   }
 }
 
@@ -78,6 +80,7 @@ async function performRequest<T>(
     throw new ApiRequestError(
       data?.error || data?.message || 'Something went wrong. Please try again.',
       response.status,
+      data,
     );
   }
 
