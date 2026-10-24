@@ -11,6 +11,9 @@
       "bundleIdentifier": "com.outnowtickets.app",
       "supportsTablet": false,
       "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "OutNow Tickets uses your camera to scan event ticket QR codes at check-in."
+      },
       "associatedDomains": [
         "applinks:outnowtickets.com",
         "applinks:www.outnowtickets.com"
