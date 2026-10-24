@@ -11,9 +11,12 @@ import { pickAndUploadEventImage, pickAndUploadHeadlinerImage } from '@/lib/even
 type Category = { id: string; name: string; slug: string };
 type TicketDraft = { id: string; name: string; description: string; price: string; quantity: string; maxPerOrder: string };
 type TaxProfile = { vatRegistered: boolean; vatNumber: string | null };
-type EventSetup = { success: true; categories: Category[]; taxProfile: TaxProfile };
+type SeatingMode = 'GENERAL_ADMISSION' | 'RESERVED' | 'MIXED';
+type SeatingTemplate = { id: string; name: string; venueName: string | null; city: string | null; sectionCount: number; seatCount: number };
+type EventSetup = { success: true; categories: Category[]; taxProfile: TaxProfile; seatingTemplates: SeatingTemplate[] };
 type SettingsDefaults = { success: true; notifications: { defaultRefundPolicy: string; defaultTicketTaxTreatment: string } };
 type TaxTreatment = 'UK_STANDARD' | 'UK_REDUCED' | 'UK_ZERO' | 'UK_EXEMPT';
+type CreatedEvent = { success: true; event: { id: string } };
 
 const newTicket = (): TicketDraft => ({ id: `${Date.now()}-${Math.random()}`, name: '', description: '', price: '', quantity: '', maxPerOrder: '10' });
 const TAX_OPTIONS: Array<{value:TaxTreatment;label:string;rate:number}> = [
@@ -29,6 +32,7 @@ function money(value:number){return `£${value.toFixed(2)}`;}
 export default function CreateEventScreen() {
   const { user, sessionToken } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
+  const [seatingTemplates, setSeatingTemplates] = useState<SeatingTemplate[]>([]);
   const [taxProfile, setTaxProfile] = useState<TaxProfile>({vatRegistered:false,vatNumber:null});
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -54,6 +58,8 @@ export default function CreateEventScreen() {
   const [ticketTaxTreatment, setTicketTaxTreatment] = useState<TaxTreatment>('UK_STANDARD');
   const [taxQualificationConfirmed,setTaxQualificationConfirmed]=useState(false);
   const [tickets, setTickets] = useState<TicketDraft[]>([newTicket()]);
+  const [seatingMode, setSeatingMode] = useState<SeatingMode>('GENERAL_ADMISSION');
+  const [seatingTemplateId, setSeatingTemplateId] = useState('');
   const [salesStart, setSalesStart] = useState('');
   const [salesEnd, setSalesEnd] = useState('');
   const [waitlistEnabled, setWaitlistEnabled] = useState(false);
@@ -70,6 +76,7 @@ export default function CreateEventScreen() {
     ])
       .then(([eventData, settings]) => {
         setCategories(eventData.categories || []);
+        setSeatingTemplates(eventData.seatingTemplates || []);
         setTaxProfile(eventData.taxProfile || {vatRegistered:false,vatNumber:null});
         if (eventData.categories?.[0]) setCategory((current) => current || eventData.categories[0].slug);
         if (settings?.notifications?.defaultRefundPolicy) setRefundPolicy(settings.notifications.defaultRefundPolicy);
@@ -102,22 +109,25 @@ export default function CreateEventScreen() {
   async function submit() {
     if (!sessionToken || user?.role !== 'PROMOTER') { setError('Sign in with a promoter account first.'); return; }
     if (!title.trim() || !description.trim() || !category || !eventDate || !startTime || !venue.trim() || !address.trim() || !city.trim() || !postcode.trim()) { setError('Complete all required event fields.'); return; }
-    if (tickets.some((ticket) => !ticket.name.trim() || !ticket.price || !ticket.quantity)) { setError('Every ticket needs a name, price and quantity.'); return; }
+    if (seatingMode !== 'RESERVED' && tickets.some((ticket) => !ticket.name.trim() || !ticket.price || !ticket.quantity)) { setError('Every general-admission ticket needs a name, price and quantity.'); return; }
+    if (seatingMode !== 'GENERAL_ADMISSION' && !seatingTemplateId) { setError('Choose a saved seating template for reserved or mixed seating.'); return; }
     if(taxProfile.vatRegistered&&ticketTaxTreatment!=='UK_STANDARD'&&!taxQualificationConfirmed){setError('Confirm that this event qualifies for the selected non-standard VAT treatment.');return;}
     if(waitlistEnabled&&!salesStart.trim()){setError('Set a future ticket sales start time before enabling the event waitlist.');return;}
 
     try {
       setSubmitting(true); setError('');
-      await apiRequest('/api/mobile/promoter/events', {
+      const response = await apiRequest<CreatedEvent>('/api/mobile/promoter/events', {
         method: 'POST',
         body: JSON.stringify({
           title, description, ageRestriction, headlinerName, headlinerImageUrl, category, eventDate, startTime, doorsOpenTime, endTime,
           venue, address, city, postcode, image, refundPolicy, ticketTaxTreatment:'UK_STANDARD'===ticketTaxTreatment||taxProfile.vatRegistered?ticketTaxTreatment:'UK_STANDARD',taxQualificationConfirmed,
           salesStart:salesStart.trim(),salesEnd:salesEnd.trim(),waitlistEnabled,waitlistOpensAt:waitlistOpensAt.trim(),waitlistClosesAt:waitlistClosesAt.trim(),waitlistNotifyOnSale,waitlistMessage:waitlistMessage.trim(),
-          tickets: tickets.map(({ id: _id, ...ticket }) => ({...ticket,saleStarts:salesStart.trim(),saleEnds:salesEnd.trim()})),
+          seatingMode,seatingTemplateId:seatingMode==='GENERAL_ADMISSION'?undefined:seatingTemplateId,
+          tickets: seatingMode==='RESERVED'?[]:tickets.map(({ id: _id, ...ticket }) => ({...ticket,saleStarts:salesStart.trim(),saleEnds:salesEnd.trim()})),
         }),
       }, sessionToken);
-      router.replace('/promoter/events');
+      if(seatingMode==='GENERAL_ADMISSION') router.replace('/promoter/events');
+      else router.replace({pathname:'/promoter/event/[id]/seating',params:{id:response.event.id}});
     } catch (err) { setError(err instanceof Error ? err.message : 'Unable to create event.'); }
     finally { setSubmitting(false); }
   }
@@ -142,6 +152,16 @@ export default function CreateEventScreen() {
     <Section title="Date & time"><Field label="Event date *" value={eventDate} onChangeText={setEventDate} placeholder="YYYY-MM-DD"/><View style={styles.twoCol}><View style={styles.flex}><Field label="Start *" value={startTime} onChangeText={setStartTime} placeholder="19:30"/></View><View style={styles.flex}><Field label="Doors" value={doorsOpenTime} onChangeText={setDoorsOpenTime} placeholder="18:30"/></View></View><Field label="End time" value={endTime} onChangeText={setEndTime} placeholder="23:30"/></Section>
     <Section title="Venue & location"><Field label="Venue *" value={venue} onChangeText={setVenue} placeholder="Venue name"/><Field label="Address *" value={address} onChangeText={setAddress} placeholder="Street address"/><View style={styles.twoCol}><View style={styles.flex}><Field label="City *" value={city} onChangeText={setCity} placeholder="London"/></View><View style={styles.flex}><Field label="Postcode *" value={postcode} onChangeText={setPostcode} placeholder="SW1A 1AA"/></View></View></Section>
     <Section title="Cover image">{!!image&&<Image source={{uri:image}} style={styles.coverPreview} contentFit="cover"/>}<Pressable disabled={uploadingImage} style={styles.imageButton} onPress={() => void chooseImage()}>{uploadingImage?<ActivityIndicator color="#7c3aed"/>:<Text style={styles.imageButtonText}>{image?'Replace cover photo':'Choose cover photo from phone'}</Text>}</Pressable>{image?<Text style={styles.uploaded}>✓ Cover photo uploaded securely</Text>:<Text style={styles.helper}>JPG, PNG or WEBP, up to 10 MB.</Text>}</Section>
+
+    <Section title="Seating & ticketing">
+      <Text style={styles.helper}>General admission uses ticket quantities. Reserved and mixed events create seat tickets from your saved seating template and take you straight to section pricing.</Text>
+      <View style={styles.seatingModes}>{([
+        ['GENERAL_ADMISSION','General admission','No assigned seats'],
+        ['RESERVED','Reserved seating','Customers choose exact seats'],
+        ['MIXED','Mixed','Standing tickets plus reserved areas'],
+      ] as Array<[SeatingMode,string,string]>).map(([mode,label,detail])=><Pressable key={mode} onPress={()=>setSeatingMode(mode)} style={[styles.seatingMode,seatingMode===mode&&styles.seatingModeSelected]}><Text style={[styles.seatingModeTitle,seatingMode===mode&&styles.seatingModeTitleSelected]}>{label}</Text><Text style={[styles.seatingModeCopy,seatingMode===mode&&styles.seatingModeCopySelected]}>{detail}</Text></Pressable>)}</View>
+      {seatingMode!=='GENERAL_ADMISSION'&&<View style={styles.templateBox}><Text style={styles.templateTitle}>Choose a saved seating template</Text>{seatingTemplates.length?seatingTemplates.map((template)=><Pressable key={template.id} onPress={()=>setSeatingTemplateId(template.id)} style={[styles.templateOption,seatingTemplateId===template.id&&styles.templateOptionSelected]}><View style={{flex:1}}><Text style={[styles.templateName,seatingTemplateId===template.id&&styles.templateNameSelected]}>{template.name}</Text><Text style={styles.templateMeta}>{template.sectionCount} sections · {template.seatCount} seats{template.venueName?` · ${template.venueName}`:''}</Text></View><Text style={styles.templateMark}>{seatingTemplateId===template.id?'✓':'○'}</Text></Pressable>):<Text style={styles.templateEmpty}>No saved templates yet. Create one in the Promoter Portal on the web, then return here to create this event.</Text>}<Text style={styles.seatingNote}>This event will be saved as a draft until you set section pricing and generate its seat inventory.</Text></View>}
+    </Section>
 
     <Section title="Ticket sales & event waitlist">
       <Text style={styles.helper}>For a future event, set when ticket sales open. You can collect interest before that time with the event pre-sale waitlist.</Text>
@@ -168,11 +188,11 @@ export default function CreateEventScreen() {
       {loadingCategories?<ActivityIndicator color="#7c3aed"/>:taxProfile.vatRegistered?<><Text style={styles.helper}>VAT registered{taxProfile.vatNumber?` · ${taxProfile.vatNumber}`:''}. Ticket prices below are the final VAT-inclusive prices customers see.</Text><View style={styles.chips}>{TAX_OPTIONS.map((item)=><Pressable key={item.value} onPress={()=>{setTicketTaxTreatment(item.value);setTaxQualificationConfirmed(false);}} style={[styles.chip,ticketTaxTreatment===item.value&&styles.chipSelected]}><Text style={[styles.chipText,ticketTaxTreatment===item.value&&styles.chipTextSelected]}>{item.label}</Text></Pressable>)}</View>{nonStandard&&<Pressable style={[styles.confirmBox,taxQualificationConfirmed&&styles.confirmBoxSelected]} onPress={()=>setTaxQualificationConfirmed((value)=>!value)}><Text style={styles.confirmMark}>{taxQualificationConfirmed?'✓':'○'}</Text><Text style={styles.confirmText}>I confirm this event qualifies for the selected non-standard VAT treatment. OutNow does not determine my VAT eligibility.</Text></Pressable>}</>:<View style={styles.noVatBox}><Text style={styles.noVatTitle}>No ticket VAT charged</Text><Text style={styles.helper}>Your promoter tax profile says you are not VAT registered. Ticket prices are still the final customer prices, but no VAT is split out.</Text></View>}
     </Section>
 
-    <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Ticket types</Text><Pressable onPress={()=>setTickets((current)=>[...current,newTicket()])}><Text style={styles.addText}>＋ Add ticket</Text></Pressable></View>
-    {tickets.map((ticket,index)=>{const gross=Number(ticket.price)||0;const breakdown=splitIncludedVat(gross,rate);return <View key={ticket.id} style={styles.ticketCard}><View style={styles.ticketHeader}><Text style={styles.ticketTitle}>Ticket {index+1}</Text>{tickets.length>1&&<Pressable onPress={()=>setTickets((current)=>current.filter((item)=>item.id!==ticket.id))}><Text style={styles.removeText}>Remove</Text></Pressable>}</View><Field label="Name *" value={ticket.name} onChangeText={(v)=>updateTicket(ticket.id,'name',v)} placeholder="General Admission"/><Field label="Description" value={ticket.description} onChangeText={(v)=>updateTicket(ticket.id,'description',v)} placeholder="Optional details"/><View style={styles.twoCol}><View style={styles.flex}><Field label="Customer price (£) *" value={ticket.price} onChangeText={(v)=>updateTicket(ticket.id,'price',v)} placeholder="20.00" keyboardType="decimal-pad"/></View><View style={styles.flex}><Field label="Quantity *" value={ticket.quantity} onChangeText={(v)=>updateTicket(ticket.id,'quantity',v)} placeholder="100" keyboardType="number-pad"/></View></View>{gross>0&&<View style={styles.vatBreakdown}><Text style={styles.vatBreakdownTitle}>{taxProfile.vatRegistered?`VAT included at ${rate}%`:'No VAT charged'}</Text><Text style={styles.vatLine}>Customer price: {money(gross)}</Text><Text style={styles.vatLine}>Net before VAT: {money(breakdown.net)}</Text><Text style={styles.vatLine}>Included VAT: {money(breakdown.vat)}</Text></View>}<Field label="Max per order" value={ticket.maxPerOrder} onChangeText={(v)=>updateTicket(ticket.id,'maxPerOrder',v)} placeholder="10" keyboardType="number-pad"/></View>})}
+    {seatingMode!=='RESERVED'&&<><View style={styles.sectionHeader}><Text style={styles.sectionTitle}>{seatingMode==='MIXED'?'Standing / general-admission tickets':'Ticket types'}</Text><Pressable onPress={()=>setTickets((current)=>[...current,newTicket()])}><Text style={styles.addText}>＋ Add ticket</Text></Pressable></View>
+    {tickets.map((ticket,index)=>{const gross=Number(ticket.price)||0;const breakdown=splitIncludedVat(gross,rate);return <View key={ticket.id} style={styles.ticketCard}><View style={styles.ticketHeader}><Text style={styles.ticketTitle}>Ticket {index+1}</Text>{tickets.length>1&&<Pressable onPress={()=>setTickets((current)=>current.filter((item)=>item.id!==ticket.id))}><Text style={styles.removeText}>Remove</Text></Pressable>}</View><Field label="Name *" value={ticket.name} onChangeText={(v)=>updateTicket(ticket.id,'name',v)} placeholder="General Admission"/><Field label="Description" value={ticket.description} onChangeText={(v)=>updateTicket(ticket.id,'description',v)} placeholder="Optional details"/><View style={styles.twoCol}><View style={styles.flex}><Field label="Customer price (£) *" value={ticket.price} onChangeText={(v)=>updateTicket(ticket.id,'price',v)} placeholder="20.00" keyboardType="decimal-pad"/></View><View style={styles.flex}><Field label="Quantity *" value={ticket.quantity} onChangeText={(v)=>updateTicket(ticket.id,'quantity',v)} placeholder="100" keyboardType="number-pad"/></View></View>{gross>0&&<View style={styles.vatBreakdown}><Text style={styles.vatBreakdownTitle}>{taxProfile.vatRegistered?`VAT included at ${rate}%`:'No VAT charged'}</Text><Text style={styles.vatLine}>Customer price: {money(gross)}</Text><Text style={styles.vatLine}>Net before VAT: {money(breakdown.net)}</Text><Text style={styles.vatLine}>Included VAT: {money(breakdown.vat)}</Text></View>}<Field label="Max per order" value={ticket.maxPerOrder} onChangeText={(v)=>updateTicket(ticket.id,'maxPerOrder',v)} placeholder="10" keyboardType="number-pad"/></View>})}</>}
 
     {!!error&&<Text style={styles.error}>{error}</Text>}
-    <Pressable disabled={busy||Boolean(nonStandard&&!taxQualificationConfirmed)} style={[styles.primary,(busy||Boolean(nonStandard&&!taxQualificationConfirmed))&&styles.disabled]} onPress={()=>void submit()}>{submitting?<ActivityIndicator color="#fff"/>:<Text style={styles.primaryText}>Submit event for review</Text>}</Pressable><Text style={styles.submitNote}>The event will remain pending until an OutNow admin approves it.</Text>
+    <Pressable disabled={busy||Boolean(nonStandard&&!taxQualificationConfirmed)} style={[styles.primary,(busy||Boolean(nonStandard&&!taxQualificationConfirmed))&&styles.disabled]} onPress={()=>void submit()}>{submitting?<ActivityIndicator color="#fff"/>:<Text style={styles.primaryText}>{seatingMode==='GENERAL_ADMISSION'?'Submit event for review':'Continue to section pricing'}</Text>}</Pressable><Text style={styles.submitNote}>{seatingMode==='GENERAL_ADMISSION'?'The event will remain pending until an OutNow admin approves it.':'You will set every reserved section price and generate seats before review.'}</Text>
   </ScrollView></KeyboardAvoidingView></SafeAreaView></View>;
 }
 
@@ -185,6 +205,7 @@ const styles=StyleSheet.create({
   eyebrow:{color:'#7c3aed',fontSize:11,fontWeight:'900',letterSpacing:1.8,marginTop:12},title:{color:'#111827',fontSize:34,lineHeight:40,fontWeight:'900',marginTop:8},copy:{color:'#6b7280',fontSize:14,lineHeight:22,marginTop:10},
   section:{marginTop:28,borderRadius:20,borderWidth:1,borderColor:'#e5e7eb',backgroundColor:'#fff',padding:16},sectionHeader:{marginTop:28,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},sectionTitle:{color:'#111827',fontSize:19,fontWeight:'900',marginBottom:10},field:{marginTop:10},label:{color:'#374151',fontSize:12,fontWeight:'800',marginBottom:7},input:{minHeight:50,borderRadius:14,borderWidth:1,borderColor:'#d1d5db',backgroundColor:'#f9fafb',color:'#111827',paddingHorizontal:14,fontSize:15},textarea:{minHeight:110,paddingTop:13,textAlignVertical:'top'},twoCol:{flexDirection:'row',gap:10},flex:{flex:1},
   chips:{flexDirection:'row',flexWrap:'wrap',gap:8,marginTop:7},chip:{borderRadius:999,borderWidth:1,borderColor:'#d1d5db',backgroundColor:'#f9fafb',paddingHorizontal:12,paddingVertical:9},chipSelected:{borderColor:'#7c3aed',backgroundColor:'#f3efff'},chipText:{color:'#4b5563',fontSize:12,fontWeight:'700'},chipTextSelected:{color:'#7c3aed'},smallLabel:{color:'#374151',fontSize:12,fontWeight:'800',marginTop:13},helper:{color:'#6b7280',fontSize:11,lineHeight:17,marginTop:9},
+  seatingModes:{gap:9,marginTop:13},seatingMode:{borderRadius:15,borderWidth:1,borderColor:'#d1d5db',backgroundColor:'#f9fafb',padding:13},seatingModeSelected:{borderColor:'#7c3aed',backgroundColor:'#f5f3ff'},seatingModeTitle:{color:'#111827',fontSize:14,fontWeight:'900'},seatingModeTitleSelected:{color:'#6d28d9'},seatingModeCopy:{color:'#6b7280',fontSize:11,marginTop:4},seatingModeCopySelected:{color:'#7c3aed'},templateBox:{marginTop:14,borderRadius:16,borderWidth:1,borderColor:'#ddd6fe',backgroundColor:'#faf8ff',padding:13},templateTitle:{color:'#111827',fontSize:13,fontWeight:'900'},templateOption:{marginTop:9,borderRadius:13,borderWidth:1,borderColor:'#ddd6fe',backgroundColor:'#fff',padding:12,flexDirection:'row',gap:10,alignItems:'center'},templateOptionSelected:{borderColor:'#7c3aed',backgroundColor:'#f3efff'},templateName:{color:'#111827',fontWeight:'900'},templateNameSelected:{color:'#6d28d9'},templateMeta:{color:'#6b7280',fontSize:10,lineHeight:15,marginTop:3},templateMark:{color:'#7c3aed',fontSize:20,fontWeight:'900'},templateEmpty:{color:'#92400e',fontSize:11,lineHeight:17,marginTop:9},seatingNote:{color:'#6d28d9',fontSize:11,lineHeight:17,fontWeight:'700',marginTop:11},
   toggleCard:{marginTop:12,borderRadius:15,borderWidth:1,borderColor:'#d1d5db',backgroundColor:'#f9fafb',padding:13,flexDirection:'row',alignItems:'center',gap:12},toggleCardActive:{borderColor:'#7c3aed',backgroundColor:'#faf5ff'},toggleTitle:{color:'#111827',fontSize:13,fontWeight:'900'},toggleMark:{color:'#7c3aed',fontSize:22,fontWeight:'900'},waitlistBox:{marginTop:12,borderRadius:16,borderWidth:1,borderColor:'#e9d5ff',backgroundColor:'#fcfaff',padding:12},rulesBox:{marginTop:12,borderRadius:13,backgroundColor:'#f3f4f6',padding:12},rulesTitle:{color:'#111827',fontSize:12,fontWeight:'900',marginBottom:5},rulesText:{color:'#4b5563',fontSize:11,lineHeight:18},
   confirmBox:{marginTop:12,borderRadius:14,borderWidth:1,borderColor:'#d1d5db',padding:12,flexDirection:'row',gap:10,backgroundColor:'#f9fafb'},confirmBoxSelected:{borderColor:'#7c3aed',backgroundColor:'#faf5ff'},confirmMark:{color:'#7c3aed',fontSize:18,fontWeight:'900'},confirmText:{flex:1,color:'#4b5563',fontSize:11,lineHeight:17,fontWeight:'700'},noVatBox:{marginTop:10,borderRadius:14,backgroundColor:'#f9fafb',borderWidth:1,borderColor:'#e5e7eb',padding:12},noVatTitle:{color:'#111827',fontSize:13,fontWeight:'900'},vatBreakdown:{marginTop:10,borderRadius:14,borderWidth:1,borderColor:'#e9d5ff',backgroundColor:'#faf5ff',padding:12},vatBreakdownTitle:{color:'#7c3aed',fontSize:12,fontWeight:'900',marginBottom:6},vatLine:{color:'#4b5563',fontSize:11,lineHeight:17},
   headlinerRow:{flexDirection:'row',alignItems:'center',gap:14,marginTop:14},headlinerImage:{width:88,height:88,borderRadius:44,backgroundColor:'#f3f4f6'},headlinerFallback:{width:88,height:88,borderRadius:44,backgroundColor:'#f3efff',alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:'#ddd6fe'},headlinerFallbackText:{color:'#7c3aed',fontSize:30,fontWeight:'900'},headlinerActions:{flex:1},
