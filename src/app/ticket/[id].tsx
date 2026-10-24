@@ -1,5 +1,4 @@
 import { Image } from 'expo-image';
-import * as Linking from 'expo-linking';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useState } from 'react';
@@ -8,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/auth-context';
 import { API_BASE, apiRequest } from '@/lib/api';
+import { presentAppleWalletPass } from '@/lib/apple-wallet';
 import { offlineTicketKeys, readOfflineValue, writeOfflineValue } from '@/lib/offline-ticket-cache';
 
 type SeatInfo={section:string;row:string|null;number:string|null;kind:string};
@@ -40,7 +40,7 @@ export default function TicketDetailScreen(){
   async function cancelTransfer(){if(offline){setError('Reconnect to the internet before changing a transfer.');return;}if(!sessionToken||!id)return;try{setWorking(true);setError('');await apiRequest(`/api/mobile/tickets/${id}/transfer`,{method:'DELETE'},sessionToken);setNotice('Transfer cancelled.');await load(true);}catch(err){setError(err instanceof Error?err.message:'Unable to cancel transfer.');}finally{setWorking(false);}}
   async function requestRefund(){if(offline){setError('Reconnect to the internet before requesting a refund.');return;}if(!sessionToken||!ticket)return;try{setWorking(true);setError('');setNotice('');await apiRequest('/api/mobile/refunds',{method:'POST',body:JSON.stringify({orderId:ticket.order.id,amount:Number(refundAmount),reason:refundReason})},sessionToken);setNotice('Refund request submitted for admin review.');await load(true);}catch(err){setError(err instanceof Error?err.message:'Unable to request refund.');}finally{setWorking(false);}}
   async function addGoogleWallet(){if(offline){setError('Reconnect to add this ticket to Google Wallet.');return;}if(!sessionToken||!id)return;try{setWalletWorking(true);setError('');const data=await apiRequest<WalletResponse>(`/api/mobile/tickets/${id}/wallet/google`,{method:'POST'},sessionToken);await WebBrowser.openBrowserAsync(data.url);}catch(err){setError(err instanceof Error?err.message:'Unable to add ticket to Google Wallet.');}finally{setWalletWorking(false);}}
-  async function addAppleWallet(){if(offline){setError('Reconnect to add this ticket to Apple Wallet.');return;}if(!sessionToken||!id)return;try{setWalletWorking(true);setError('');const data=await apiRequest<WalletResponse>(`/api/mobile/tickets/${id}/wallet/apple`,{method:'POST'},sessionToken);await Linking.openURL(data.url);}catch(err){setError(err instanceof Error?err.message:'Unable to add ticket to Apple Wallet.');}finally{setWalletWorking(false);}}
+  async function addAppleWallet(){if(offline){setError('Reconnect to add this ticket to Apple Wallet.');return;}if(!sessionToken||!id)return;try{setWalletWorking(true);setError('');const data=await apiRequest<WalletResponse>(`/api/mobile/tickets/${id}/wallet/apple`,{method:'POST'},sessionToken);await presentAppleWalletPass(data.url);}catch(err){setError(err instanceof Error?err.message:'Unable to add ticket to Apple Wallet.');}finally{setWalletWorking(false);}}
   async function addGoogleCalendar(){if(!ticket)return;const start=new Date(ticket.event.date);const end=ticket.event.endDate?new Date(ticket.event.endDate):new Date(start.getTime()+3*60*60*1000);const stamp=(d:Date)=>d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z');const url=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(ticket.event.title)}&dates=${stamp(start)}/${stamp(end)}&details=${encodeURIComponent(`OutNow ticket ${ticket.ticketNumber}\n${API_BASE}/events/${ticket.event.id}`)}&location=${encodeURIComponent(`${ticket.event.venue}, ${ticket.event.location}`)}`;await WebBrowser.openBrowserAsync(url);}
   async function openCalendarFile(){if(!ticket)return;await WebBrowser.openBrowserAsync(`${API_BASE}/api/mobile/events/${ticket.event.id}/calendar`);}
   function goBackSafely(){if(router.canGoBack()){router.back();return;}router.replace('/(tabs)/tickets');}

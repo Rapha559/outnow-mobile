@@ -1,0 +1,1 @@
+export { presentAppleWalletPass } from './AppleWalletModule';

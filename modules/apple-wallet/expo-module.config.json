@@ -1,0 +1,8 @@
+{
+  "platforms": ["ios"],
+  "ios": {
+    "modules": ["AppleWalletModule"],
+    "podspecPath": "ios/AppleWallet.podspec",
+    "swiftModuleName": "AppleWallet"
+  }
+}
