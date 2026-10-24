@@ -1,8 +1,21 @@
 import ExpoModulesCore
 import PassKit
 
-public final class AppleWalletModule: Module, PKAddPassesViewControllerDelegate {
+private final class AppleWalletPassesDelegate: NSObject, PKAddPassesViewControllerDelegate {
+  private let didFinish: () -> Void
+
+  init(didFinish: @escaping () -> Void) {
+    self.didFinish = didFinish
+  }
+
+  func addPassesViewControllerDidFinish(_ controller: PKAddPassesViewController) {
+    controller.dismiss(animated: true, completion: didFinish)
+  }
+}
+
+public final class AppleWalletModule: Module {
   private weak var addPassesController: PKAddPassesViewController?
+  private var addPassesDelegate: AppleWalletPassesDelegate?
 
   public func definition() -> ModuleDefinition {
     Name("AppleWallet")
@@ -53,8 +66,13 @@ public final class AppleWalletModule: Module, PKAddPassesViewControllerDelegate 
               return
             }
 
-            controller.delegate = self
+            let delegate = AppleWalletPassesDelegate { [weak self] in
+              self?.addPassesController = nil
+              self?.addPassesDelegate = nil
+            }
+            controller.delegate = delegate
             self.addPassesController = controller
+            self.addPassesDelegate = delegate
             viewController.present(controller, animated: true) {
               promise.resolve()
             }
@@ -67,9 +85,4 @@ public final class AppleWalletModule: Module, PKAddPassesViewControllerDelegate 
     .runOnQueue(.main)
   }
 
-  public func addPassesViewControllerDidFinish(_ controller: PKAddPassesViewController) {
-    controller.dismiss(animated: true) { [weak self] in
-      self?.addPassesController = nil
-    }
-  }
 }
