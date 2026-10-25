@@ -28,6 +28,7 @@ export default function PromoterPayoutsScreen(){
   useEffect(()=>{const subscription=AppState.addEventListener('change',(state)=>{if(state==='active')void load(true);});return()=>subscription.remove();},[load]);
   useEffect(()=>{if(stripeReturn==='complete'){setNotice('Stripe setup finished. We refreshed your payout status.');void load(true);}else if(stripeReturn==='refresh'){setNotice('Your Stripe setup link expired or needs to be renewed. Tap Continue Stripe setup to resume securely.');void load(true);}},[stripeReturn,load]);
   async function connectStripe(){if(!sessionToken)return;try{setConnecting(true);setError('');setNotice('');const response=await apiRequest<StripeStart>('/api/mobile/promoter/stripe',{method:'POST'},sessionToken);await WebBrowser.openBrowserAsync(response.url);setTimeout(()=>void load(true),600);}catch(err){setError(err instanceof Error?err.message:'Unable to start Stripe setup.');}finally{setConnecting(false);}}
+  async function openStripeDashboard(){if(!sessionToken)return;try{setConnecting(true);setError('');const response=await apiRequest<StripeStart>('/api/mobile/promoter/stripe',{method:'POST',body:JSON.stringify({action:'dashboard'})},sessionToken);await WebBrowser.openBrowserAsync(response.url);}catch(err){setError(err instanceof Error?err.message:'Unable to open the Stripe dashboard.');}finally{setConnecting(false);}}
 
   const nextExpected=useMemo(()=>{
     if(!data)return null;
@@ -50,6 +51,7 @@ export default function PromoterPayoutsScreen(){
     {loading?<View style={styles.state}><ActivityIndicator size="large" color="#7c3aed"/></View>:data&&<>
       <View style={styles.stripeCard}><View style={{flex:1}}><Text style={styles.label}>STRIPE CONNECT</Text><Text style={styles.stripeTitle}>{stripe?.payoutsEnabled?'Ready for payouts':stripe?.connected?'Setup needs attention':'Not connected'}</Text><Text style={styles.copy}>{stripe?.payoutsEnabled?'Charges and payouts are enabled.':stripe?.connected?'Complete any remaining Stripe requirements.':'Connect your Stripe account to receive promoter payouts.'}</Text></View><View style={[styles.dot,stripe?.payoutsEnabled&&styles.dotGood]}/></View>
       {!stripe?.payoutsEnabled&&<Pressable disabled={connecting} style={styles.primary} onPress={()=>void connectStripe()}>{connecting?<ActivityIndicator color="#fff"/>:<Text style={styles.primaryText}>{stripe?.connected?'Continue Stripe setup':'Connect Stripe'}</Text>}</Pressable>}
+      {!!stripe?.connected&&<Pressable disabled={connecting} style={styles.secondary} onPress={()=>void openStripeDashboard()}><Text style={styles.secondaryText}>Open Stripe dashboard</Text></Pressable>}
       <Pressable style={styles.secondary} onPress={()=>void load(true)}><Text style={styles.secondaryText}>Refresh Stripe status</Text></Pressable>
 
       {payoutState&&<View style={styles.statusCard}><Text style={styles.statusLabel}>CURRENT PAYOUT STATUS</Text><Text style={styles.statusTitle}>{payoutState.title}</Text><Text style={styles.statusCopy}>{payoutState.copy}</Text>{nextExpected&&<Text style={styles.nextCheck}>Next expected payout check: {dateTime(nextExpected)}</Text>}</View>}
