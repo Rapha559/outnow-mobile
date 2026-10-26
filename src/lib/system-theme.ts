@@ -85,11 +85,11 @@ export function installSystemThemePreprocessors() {
   StyleSheet.setStyleAttributePreprocessor('shadowColor', processUnchangedColor);
 }
 
-export function setSystemThemeScheme(scheme: ColorSchemeName) {
+export function setSystemThemeScheme(scheme: ColorSchemeName | null) {
   currentScheme = scheme === 'dark' ? 'dark' : 'light';
 }
 
-export function systemThemeColors(scheme: ColorSchemeName) {
+export function systemThemeColors(scheme: ColorSchemeName | null) {
   const dark = scheme === 'dark';
   return {
     dark,
