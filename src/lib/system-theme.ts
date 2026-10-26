@@ -14,6 +14,7 @@ const backgroundDarkMap: Record<string, string> = {
   '#f5f3ff': '#1e192a',
   '#f3efff': '#1e192a',
   '#faf5ff': '#1a1523',
+  '#faf8ff': '#1a1523',
   '#ede9fe': '#2a1f3d',
   '#ecfdf5': '#10271c',
   '#f0fdf4': '#10271c',
