@@ -225,17 +225,19 @@ export function AppLaunchIntro({ onFinish }: Props) {
           ]}>
           <View style={styles.logoRing}>
             <View style={styles.logoRingInner}>
-              <View style={styles.ticket}>
-                <View style={[styles.ticketNotch, styles.ticketNotchTop]} />
-                <View style={[styles.ticketNotch, styles.ticketNotchBottom]} />
-                <View style={[styles.ticketSideNotch, styles.ticketSideNotchLeft]} />
-                <View style={[styles.ticketSideNotch, styles.ticketSideNotchRight]} />
-                <View style={styles.perforationColumn}>
-                  <View style={styles.perforationDash} />
-                  <View style={styles.perforationDash} />
-                  <View style={styles.perforationDash} />
-                  <View style={styles.perforationDash} />
+              <View style={styles.iconContainer}>
+                <View style={styles.ticket}>
+                  <View style={styles.perforationColumn}>
+                    <View style={styles.perforationDash} />
+                    <View style={styles.perforationDash} />
+                    <View style={styles.perforationDash} />
+                    <View style={styles.perforationDash} />
+                  </View>
                 </View>
+                <View style={[styles.iconDot, styles.iconDotTop]} />
+                <View style={[styles.iconDot, styles.iconDotBottom]} />
+                <View style={[styles.iconDot, styles.iconDotLeft]} />
+                <View style={[styles.iconDot, styles.iconDotRight]} />
               </View>
             </View>
           </View>
@@ -330,7 +332,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // This fixed, relative canvas is the only coordinate system for the ticket
+  // and its four cut-out dots. It keeps the mark identical on iOS and Android
+  // regardless of the screen dimensions or safe-area insets.
+  iconContainer: {
+    position: 'relative',
+    width: 112,
+    height: 112,
+    overflow: 'visible',
+  },
   ticket: {
+    position: 'absolute',
+    top: 4,
+    left: 14,
     width: 84,
     height: 104,
     borderRadius: 15,
@@ -343,33 +357,35 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     elevation: 12,
   },
-  ticketNotch: {
+  iconDot: {
     position: 'absolute',
     width: 24,
     height: 24,
     borderRadius: 12,
     backgroundColor: '#050505',
-    left: 30,
+    zIndex: 2,
   },
-  ticketNotchTop: {
-    top: -12,
+  iconDotTop: {
+    top: 0,
+    left: 44,
   },
-  ticketNotchBottom: {
-    bottom: -12,
+  iconDotBottom: {
+    bottom: 0,
+    left: 44,
   },
-  ticketSideNotch: {
-    position: 'absolute',
+  iconDotLeft: {
+    left: 0,
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#050505',
     top: 38,
   },
-  ticketSideNotchLeft: {
-    left: -14,
-  },
-  ticketSideNotchRight: {
-    right: -14,
+  iconDotRight: {
+    right: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    top: 38,
   },
   perforationColumn: {
     gap: 8,
