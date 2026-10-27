@@ -1,4 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
+import { File } from 'expo-file-system';
+import { fetch as expoFetch } from 'expo/fetch';
 
 import { apiRequest } from '@/lib/api';
 
@@ -21,7 +23,6 @@ type CloudinaryResponse = {
 
 type UploadOptions = {
   aspect: [number, number];
-  filePrefix: string;
   permissionError: string;
 };
 
@@ -32,7 +33,6 @@ async function uploadAsset(
   sessionToken: string,
   asset: ImagePicker.ImagePickerAsset,
   resourceType: ResourceType,
-  filePrefix: string,
 ) {
   const maxSize = resourceType === 'video' ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
   if (asset.fileSize && asset.fileSize > maxSize) {
@@ -45,19 +45,21 @@ async function uploadAsset(
     sessionToken,
   );
 
-  const extension = resourceType === 'video' ? 'mp4' : 'jpg';
-  const fileName = asset.fileName || `${filePrefix}-${Date.now()}.${extension}`;
-  const mimeType = asset.mimeType || (resourceType === 'video' ? 'video/mp4' : 'image/jpeg');
   const formData = new FormData();
 
-  formData.append('file', { uri: asset.uri, name: fileName, type: mimeType } as unknown as Blob);
-  formData.append('api_key', signature.apiKey);
+  // Expo's fetch implementation only supports Blob/File multipart parts. A
+  // React Native `{ uri, name, type }` descriptor is valid for the legacy
+  // fetch implementation, but throws "Unsupported FormDataPart implementation"
+  // once Expo's fetch runtime handles the request.
+  const file = new File(asset.uri);
+  formData.append('file', file);
+  formData.append('api_key', String(signature.apiKey));
   formData.append('timestamp', String(signature.timestamp));
-  formData.append('signature', signature.signature);
-  formData.append('folder', signature.folder);
-  formData.append('public_id', signature.publicId);
+  formData.append('signature', String(signature.signature));
+  formData.append('folder', String(signature.folder));
+  formData.append('public_id', String(signature.publicId));
 
-  const response = await fetch(
+  const response = await expoFetch(
     `https://api.cloudinary.com/v1_1/${signature.cloudName}/${resourceType}/upload`,
     { method: 'POST', body: formData },
   );
@@ -88,13 +90,12 @@ async function pickAndUploadImage(sessionToken: string, options: UploadOptions) 
   });
 
   if (result.canceled || !result.assets?.[0]) return null;
-  return uploadAsset(sessionToken, result.assets[0], 'image', options.filePrefix);
+  return uploadAsset(sessionToken, result.assets[0], 'image');
 }
 
 export function pickAndUploadEventImage(sessionToken: string) {
   return pickAndUploadImage(sessionToken, {
     aspect: [16, 9],
-    filePrefix: 'outnow-event',
     permissionError: 'Photo library permission is required to choose an event image.',
   });
 }
@@ -102,7 +103,6 @@ export function pickAndUploadEventImage(sessionToken: string) {
 export function pickAndUploadHeadlinerImage(sessionToken: string) {
   return pickAndUploadImage(sessionToken, {
     aspect: [1, 1],
-    filePrefix: 'outnow-headliner',
     permissionError: 'Photo library permission is required to choose a headliner image.',
   });
 }
@@ -110,7 +110,6 @@ export function pickAndUploadHeadlinerImage(sessionToken: string) {
 export function pickAndUploadBusinessLogo(sessionToken: string) {
   return pickAndUploadImage(sessionToken, {
     aspect: [1, 1],
-    filePrefix: 'outnow-business-logo',
     permissionError: 'Photo library permission is required to choose a business logo.',
   });
 }
@@ -123,5 +122,5 @@ export async function pickAndUploadEventMedia(sessionToken: string) {
   if (result.canceled || !result.assets?.[0]) return null;
   const asset = result.assets[0];
   const resourceType: ResourceType = asset.type === 'video' ? 'video' : 'image';
-  return uploadAsset(sessionToken, asset, resourceType, 'outnow-media');
+  return uploadAsset(sessionToken, asset, resourceType);
 }
