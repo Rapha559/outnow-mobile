@@ -105,7 +105,7 @@ export default function RootLayout(){
       <Stack.Screen name="notifications"/><Stack.Screen name="tickets/transfer/accept"/>
       <Stack.Screen name="customer/orders"/><Stack.Screen name="customer/activity"/><Stack.Screen name="customer/checkout-result"/><Stack.Screen name="customer/reminders"/>
       <Stack.Screen name="login"/><Stack.Screen name="signup"/><Stack.Screen name="verify"/><Stack.Screen name="settings"/><Stack.Screen name="staff"/>
-      <Stack.Screen name="promoter/dashboard"/><Stack.Screen name="promoter/analytics"/><Stack.Screen name="promoter/events"/><Stack.Screen name="promoter/create-event"/><Stack.Screen name="promoter/scanner"/>
+      <Stack.Screen name="promoter/dashboard"/><Stack.Screen name="promoter/analytics"/><Stack.Screen name="promoter/events"/><Stack.Screen name="promoter/create-event"/><Stack.Screen name="promoter/scanner"/><Stack.Screen name="promoter/box-office"/>
     </Stack>
     <StaffScannerShortcut/>
     <PromoterEventWaitlistEditor/>

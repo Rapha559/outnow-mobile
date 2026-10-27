@@ -8,7 +8,8 @@ import { apiRequest } from '@/lib/api';
 
 type Assignment = {
   id: string;
-  role: 'SCANNER';
+  role: 'SCANNER' | 'MANAGER' | 'BOX_OFFICE' | 'CHECK_IN';
+  permissions: { sellTickets:boolean; checkIn:boolean; viewAttendees:boolean; viewDoorSales:boolean; issueComplimentary:boolean };
   event: {
     id: string;
     title: string;
@@ -112,7 +113,7 @@ export default function StaffHomeScreen() {
 
           <Text style={styles.eyebrow}>DOOR TEAM</Text>
           <Text style={[styles.title, { color: colors.text }]}>Your assigned events</Text>
-          <Text style={[styles.copy, { color: colors.sub }]}>You can only scan tickets for events the promoter has assigned to your account.</Text>
+          <Text style={[styles.copy, { color: colors.sub }]}>You only see the event tools a promoter has assigned to your account.</Text>
 
           {!!error && <View style={styles.error}><Text style={styles.errorText}>{error}</Text></View>}
 
@@ -124,21 +125,18 @@ export default function StaffHomeScreen() {
           ) : (
             <View style={{ gap: 12 }}>
               {data.assignments.map((assignment) => (
-                <Pressable
-                  key={assignment.id}
-                  style={[styles.eventCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={() => router.push({ pathname: '/promoter/scanner', params: { eventId: assignment.event.id, staff: '1' } })}
-                >
+                <View key={assignment.id} style={[styles.eventCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                   <View style={styles.row}>
-                    <View style={styles.scanBadge}><Text style={styles.scanBadgeText}>SCANNER</Text></View>
+                    <View style={styles.scanBadge}><Text style={styles.scanBadgeText}>{assignment.role.replace('_',' ')}</Text></View>
                     <Text style={[styles.status, { color: colors.sub }]}>{assignment.event.status.replaceAll('_', ' ')}</Text>
                   </View>
                   <Text style={[styles.eventTitle, { color: colors.text }]}>{assignment.event.title}</Text>
                   <Text style={[styles.organiser, { color: colors.sub }]}>{assignment.event.organiser}</Text>
                   <Text style={[styles.meta, { color: colors.sub }]}>{eventDate(assignment.event.date)}</Text>
                   <Text style={[styles.meta, { color: colors.sub }]}>{assignment.event.venue} · {assignment.event.location}</Text>
-                  <View style={[styles.openScanner, { backgroundColor: dark ? '#24143d' : '#f5f3ff' }]}><Text style={styles.openScannerText}>Open scanner →</Text></View>
-                </Pressable>
+                  {assignment.permissions.checkIn&&<Pressable style={[styles.openScanner, { backgroundColor: dark ? '#24143d' : '#f5f3ff' }]} onPress={() => router.push({ pathname: '/promoter/scanner', params: { eventId: assignment.event.id, staff: '1' } })}><Text style={styles.openScannerText}>Open scanner →</Text></Pressable>}
+                  {assignment.permissions.sellTickets&&<Pressable style={styles.boxOffice} onPress={() => router.push({ pathname: '/promoter/box-office', params: { eventId: assignment.event.id } })}><Text style={styles.boxOfficeText}>Open Box Office →</Text></Pressable>}
+                </View>
               ))}
             </View>
           )}
@@ -170,6 +168,7 @@ const styles = StyleSheet.create({
   meta: { fontSize: 10, lineHeight: 16, marginTop: 6 },
   openScanner: { minHeight: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 14 },
   openScannerText: { color: '#7c3aed', fontSize: 11, fontWeight: '900' },
+  boxOffice:{ minHeight:42,borderRadius:12,alignItems:'center',justifyContent:'center',marginTop:8,backgroundColor:'#7c3aed' }, boxOfficeText:{color:'#fff',fontSize:11,fontWeight:'900'},
   empty: { minHeight: 180, borderWidth: 1, borderRadius: 20, alignItems: 'center', justifyContent: 'center', padding: 22 },
   emptyTitle: { fontSize: 18, fontWeight: '900' },
   emptyCopy: { fontSize: 11, lineHeight: 17, textAlign: 'center', marginTop: 7 },

@@ -13,7 +13,9 @@
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "OutNow Tickets uses your camera to scan event ticket QR codes at check-in."
+        "NSCameraUsageDescription": "OutNow Tickets uses your camera to scan event ticket QR codes at check-in.",
+        "NSLocationWhenInUseUsageDescription": "OutNow Tickets needs your location to securely process in-person payments with Stripe Terminal.",
+        "NSBluetoothAlwaysUsageDescription": "OutNow Tickets uses Bluetooth to connect secure Stripe card readers."
       },
       "associatedDomains": [
         "applinks:outnowtickets.com",
@@ -64,7 +66,10 @@
       ],
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -74,6 +79,16 @@
     "plugins": [
       "expo-router",
       "expo-dev-client",
+      [
+        "@stripe/stripe-terminal-react-native",
+        {
+          "bluetoothBackgroundMode": true,
+          "tapToPayCheck": true,
+          "appDelegate": true,
+          "locationWhenInUsePermission": "OutNow Tickets needs your location to securely process in-person payments with Stripe Terminal.",
+          "bluetoothAlwaysUsagePermission": "OutNow Tickets uses Bluetooth to connect secure Stripe card readers."
+        }
+      ],
       "expo-notifications",
       "expo-apple-authentication",
       [
