@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.outnowtickets.app",
-      "buildNumber": "6",
+      "buildNumber": "11",
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "infoPlist": {
@@ -140,7 +140,9 @@
           "imageWidth": 190
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      "expo-web-browser",
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,
