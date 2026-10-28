@@ -92,10 +92,16 @@
       "expo-notifications",
       "expo-apple-authentication",
       [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow OutNow Tickets to use Face ID to protect Box Office and Tap to Pay access."
+        }
+      ],
+      [
         "expo-secure-store",
         {
           "configureAndroidBackup": true,
-          "faceIDPermission": "Allow OutNow Tickets to access Face ID."
+          "faceIDPermission": "Allow OutNow Tickets to use Face ID to protect Box Office and Tap to Pay access."
         }
       ],
       [

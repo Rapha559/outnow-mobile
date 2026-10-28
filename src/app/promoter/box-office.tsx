@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { MerchantAccessGate, MerchantSecurity } from '@/components/merchant-access-gate';
 import { useAuth } from '@/context/auth-context';
 import { apiRequest } from '@/lib/api';
 
@@ -42,7 +43,7 @@ function newSaleKey() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
 }
 
-function BoxOfficeContent({ eventId }: { eventId: string }) {
+function BoxOfficeContent({ eventId, security }: { eventId: string; security: MerchantSecurity }) {
   const { sessionToken } = useAuth();
   const [data, setData] = useState<BoxOfficeData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,7 +71,10 @@ function BoxOfficeContent({ eventId }: { eventId: string }) {
     }
   }, [eventId, sessionToken]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const timer = setTimeout(() => { void load(); }, 0);
+    return () => clearTimeout(timer);
+  }, [load]);
 
   const lines = useMemo(
     () => Object.entries(quantities)
@@ -84,13 +88,17 @@ function BoxOfficeContent({ eventId }: { eventId: string }) {
     [data, lines]
   );
   const isGenuineFree = subtotal === 0;
-  const availableMethods = isGenuineFree
+  const availableMethods = useMemo(() => isGenuineFree
     ? (['FREE'] as const)
-    : (['CASH', 'STRIPE_TERMINAL', ...(data?.permissions.includes('ISSUE_COMPLIMENTARY') ? ['COMPLIMENTARY' as const] : [])] as const);
+    : (['CASH', 'STRIPE_TERMINAL', ...(data?.permissions.includes('ISSUE_COMPLIMENTARY') ? ['COMPLIMENTARY' as const] : [])] as const),
+  [data?.permissions, isGenuineFree]);
   const total = method === 'FREE' || method === 'COMPLIMENTARY' ? 0 : method === 'CASH' ? subtotal : subtotal * 1.05;
 
   useEffect(() => {
-    if (!availableMethods.includes(method as never)) setMethod(availableMethods[0]);
+    const timer = setTimeout(() => {
+      if (!availableMethods.includes(method as never)) setMethod(availableMethods[0]);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [availableMethods, method]);
 
   const change = (id: string, delta: number) => setQuantities((current) => {
@@ -122,6 +130,10 @@ function BoxOfficeContent({ eventId }: { eventId: string }) {
   }
 
   async function connectTapToPay() {
+    if (!await security.authenticateSensitiveAction('connect Tap to Pay')) {
+      setError(`${security.biometricLabel} is required before connecting Tap to Pay.`);
+      return;
+    }
     try {
       const seenEducation = await SecureStore.getItemAsync(TAP_TO_PAY_EDUCATION_KEY);
       if (seenEducation !== 'seen') {
@@ -155,8 +167,16 @@ function BoxOfficeContent({ eventId }: { eventId: string }) {
         ]
       ));
       if (!confirmed) return;
+      if (!await security.authenticateSensitiveAction('issue complimentary paid tickets')) {
+        setError(`${security.biometricLabel} is required to issue complimentary paid tickets.`);
+        return;
+      }
     }
     if (method === 'STRIPE_TERMINAL' && !readerReady) return setError('Connect Tap to Pay before charging a card.');
+    if (method === 'STRIPE_TERMINAL' && !await security.authenticateSensitiveAction('take a card payment')) {
+      setError(`${security.biometricLabel} is required before taking a card payment.`);
+      return;
+    }
 
     try {
       setWorking(true);
@@ -224,6 +244,10 @@ function BoxOfficeContent({ eventId }: { eventId: string }) {
       ]
     ));
     if (!confirmed) return;
+    if (!await security.authenticateSensitiveAction('refund a card payment')) {
+      setError(`${security.biometricLabel} is required to refund a card payment.`);
+      return;
+    }
 
     try {
       setWorking(true);
@@ -256,6 +280,19 @@ function BoxOfficeContent({ eventId }: { eventId: string }) {
           <Text style={styles.eyebrow}>DOOR SALES</Text>
           <Text style={styles.title}>{data?.event.title || 'Event'}</Text>
           <Text style={styles.copy}>Fast in-person tickets with event-only staff access.</Text>
+
+          <View style={styles.securityCard}>
+            <Text style={styles.securityTitle}>{security.biometricEnabled ? `${security.biometricLabel} protection is on` : 'Protect Box Office'}</Text>
+            <Text style={styles.securityCopy}>{security.biometricEnabled
+              ? `OutNow asks for ${security.biometricLabel} when Box Office opens and again before Tap to Pay, card payments, refunds, or complimentary paid tickets.`
+              : security.biometricAvailable
+                ? `Require ${security.biometricLabel} on this device before opening Box Office and taking sensitive merchant actions.`
+                : 'Biometric protection is not available in this app build or on this device. Your OutNow sign-in still protects merchant access.'}</Text>
+            {security.biometricAvailable && <Pressable onPress={() => void (security.biometricEnabled ? security.disableBiometrics() : security.enableBiometrics())} style={styles.securityButton}>
+              <Text style={styles.securityButtonText}>{security.biometricEnabled ? 'Turn off protection' : `Enable ${security.biometricLabel}`}</Text>
+            </Pressable>}
+            {!!security.notice && <Text style={styles.securityNotice}>{security.notice}</Text>}
+          </View>
 
           {!!error && <View style={styles.error}><Text style={styles.errorText}>{error}</Text></View>}
 
@@ -363,11 +400,11 @@ function BoxOfficeContent({ eventId }: { eventId: string }) {
 export default function BoxOfficeScreen() {
   const { eventId } = useLocalSearchParams<{ eventId: string }>();
   const id = Array.isArray(eventId) ? eventId[0] : eventId;
-  const { sessionToken } = useAuth();
-  if (!id || !sessionToken) return <View style={styles.center}><Text>Choose an event after signing in.</Text></View>;
+  const { sessionToken, user } = useAuth();
+  if (!id || !sessionToken || !user) return <View style={styles.center}><Text>Choose an event after signing in.</Text></View>;
 
   return (
-    <StripeTerminalProvider tokenProvider={async () => {
+    <MerchantAccessGate userId={user.id}>{security => <StripeTerminalProvider tokenProvider={async () => {
       const response = await fetch('https://www.outnowtickets.com/api/box-office/terminal/connection-token', {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${sessionToken}` },
@@ -377,8 +414,8 @@ export default function BoxOfficeScreen() {
       if (!response.ok || !body.secret) throw new Error(body.error || 'Terminal token unavailable.');
       return body.secret;
     }}>
-      <BoxOfficeContent eventId={id} />
-    </StripeTerminalProvider>
+      <BoxOfficeContent eventId={id} security={security} />
+    </StripeTerminalProvider>}</MerchantAccessGate>
   );
 }
 
@@ -392,6 +429,12 @@ const styles = StyleSheet.create({
   eyebrow: { color: '#7c3aed', fontSize: 10, fontWeight: '900', letterSpacing: 1.6, marginTop: 16 },
   title: { fontSize: 30, fontWeight: '900', color: '#111827', marginTop: 6 },
   copy: { color: '#6b7280', marginTop: 6, marginBottom: 12 },
+  securityCard: { borderRadius: 16, borderWidth: 1, borderColor: '#ddd6fe', backgroundColor: '#faf8ff', padding: 14, marginTop: 8 },
+  securityTitle: { color: '#4c1d95', fontSize: 13, fontWeight: '900' },
+  securityCopy: { color: '#5b556b', fontSize: 11, lineHeight: 17, marginTop: 5 },
+  securityButton: { alignSelf: 'flex-start', borderRadius: 10, borderWidth: 1, borderColor: '#a78bfa', paddingHorizontal: 11, paddingVertical: 8, marginTop: 10 },
+  securityButtonText: { color: '#6d28d9', fontSize: 11, fontWeight: '900' },
+  securityNotice: { color: '#6d28d9', fontSize: 10, lineHeight: 15, marginTop: 9 },
   section: { fontSize: 15, fontWeight: '900', color: '#111827', marginTop: 22, marginBottom: 8 },
   ticket: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16, padding: 13, flexDirection: 'row', alignItems: 'center', marginTop: 8 },
   ticketName: { fontWeight: '900', color: '#111827' },
