@@ -3,7 +3,15 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-const PREFERENCE_KEY_PREFIX = 'outnow_biometric_box_office_enabled:';
+const PREFERENCE_KEY_PREFIX = 'outnow.biometric.box-office.enabled.';
+const LEGACY_PREFERENCE_KEY_PREFIX = 'outnow_biometric_box_office_enabled:';
+const PREFERENCE_OPTIONS: SecureStore.SecureStoreOptions = {
+  // Keep this device-only security setting in its own Keychain service. It
+  // avoids collisions with the signed-in session and is never restored onto a
+  // different device.
+  keychainService: 'com.outnowtickets.box-office-security',
+  keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+};
 
 export type BiometricCapability = {
   available: boolean;
@@ -18,6 +26,10 @@ export type BiometricAuthenticationResult = {
 
 function preferenceKey(userId: string) {
   return `${PREFERENCE_KEY_PREFIX}${userId}`;
+}
+
+function legacyPreferenceKey(userId: string) {
+  return `${LEGACY_PREFERENCE_KEY_PREFIX}${userId}`;
 }
 
 function isNativePlatform() {
@@ -70,8 +82,18 @@ export async function getMerchantBiometricCapability(): Promise<BiometricCapabil
 
 export async function isMerchantBiometricEnabled(userId: string): Promise<boolean> {
   try {
-    return (await SecureStore.getItemAsync(preferenceKey(userId))) === 'true';
-  } catch {
+    const value = await SecureStore.getItemAsync(preferenceKey(userId), PREFERENCE_OPTIONS);
+    if (value === 'true') return true;
+
+    // Preserve a preference saved by the first version of this feature, then
+    // migrate it to the isolated Keychain service on the next successful read.
+    const legacyValue = await SecureStore.getItemAsync(legacyPreferenceKey(userId));
+    if (legacyValue !== 'true') return false;
+    await SecureStore.setItemAsync(preferenceKey(userId), 'true', PREFERENCE_OPTIONS);
+    await SecureStore.deleteItemAsync(legacyPreferenceKey(userId));
+    return true;
+  } catch (error) {
+    console.warn('MERCHANT_BIOMETRIC_PREFERENCE_READ_ERROR', error);
     return false;
   }
 }
@@ -80,12 +102,15 @@ export async function setMerchantBiometricEnabled(userId: string, enabled: boole
   try {
     const key = preferenceKey(userId);
     if (enabled) {
-      await SecureStore.setItemAsync(key, 'true');
+      await SecureStore.setItemAsync(key, 'true', PREFERENCE_OPTIONS);
+      if (await SecureStore.getItemAsync(key, PREFERENCE_OPTIONS) !== 'true') return false;
     } else {
-      await SecureStore.deleteItemAsync(key);
+      await SecureStore.deleteItemAsync(key, PREFERENCE_OPTIONS);
+      await SecureStore.deleteItemAsync(legacyPreferenceKey(userId));
     }
     return true;
-  } catch {
+  } catch (error) {
+    console.warn('MERCHANT_BIOMETRIC_PREFERENCE_WRITE_ERROR', error);
     return false;
   }
 }
