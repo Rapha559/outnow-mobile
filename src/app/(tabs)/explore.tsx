@@ -98,7 +98,7 @@ export default function ExploreScreen() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function useCurrentLocation(requestPermission = true) {
+  async function loadCurrentLocation(requestPermission = true) {
     try {
       setLocationLoading(true);
       const location = await getUserLocation(requestPermission);
@@ -111,7 +111,7 @@ export default function ExploreScreen() {
     }
   }
 
-  useEffect(() => { void useCurrentLocation(true); }, []);
+  useEffect(() => { void loadCurrentLocation(true); }, []);
 
   const categories = useMemo(() => Array.from(new Set(events.map((event) => event.category).filter(Boolean))).sort(), [events]);
 
@@ -168,7 +168,7 @@ export default function ExploreScreen() {
           <View style={styles.locationWrap}>
             <Text style={styles.locationIcon}>⌖</Text>
             <TextInput value={locationQuery} onChangeText={setLocationQuery} placeholder="City or venue" placeholderTextColor="#9ca3af" style={styles.searchInput} autoCapitalize="words" />
-            <Pressable disabled={locationLoading} style={styles.locationButton} onPress={() => void useCurrentLocation(true)}>
+            <Pressable disabled={locationLoading} style={styles.locationButton} onPress={() => void loadCurrentLocation(true)}>
               {locationLoading ? <ActivityIndicator size="small" color="#7c3aed" /> : <Text style={styles.locationButtonText}>Near me</Text>}
             </Pressable>
           </View>
