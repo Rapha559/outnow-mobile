@@ -14,6 +14,8 @@ type BoxOfficeData = {
   success: true;
   event: { id: string; title: string; date: string; venue: string };
   permissions: string[];
+  isPromoter: boolean;
+  reporting: { count: number; total: number }[];
   ticketTypes: TicketType[];
   feePolicy: { terminal: string; cash: string; free: string; complimentary: string };
 };
@@ -281,6 +283,13 @@ function BoxOfficeContent({ eventId, security }: { eventId: string; security: Me
           <Text style={styles.title}>{data?.event.title || 'Event'}</Text>
           <Text style={styles.copy}>Fast in-person tickets with event-only staff access.</Text>
 
+          {data?.permissions.includes('VIEW_DOOR_SALES') && (
+            <View style={styles.activityCard}>
+              <Text style={styles.activityLabel}>DOOR SALES ACTIVITY</Text>
+              <Text style={styles.activityValue}>{data.reporting[0]?.count || 0} completed sale{data.reporting[0]?.count === 1 ? '' : 's'} · £{(data.reporting[0]?.total || 0).toFixed(2)}</Text>
+            </View>
+          )}
+
           <View style={styles.securityCard}>
             <Text style={styles.securityTitle}>{security.biometricEnabled ? `${security.biometricLabel} protection is on` : 'Protect Box Office'}</Text>
             <Text style={styles.securityCopy}>{security.biometricEnabled
@@ -319,7 +328,7 @@ function BoxOfficeContent({ eventId, security }: { eventId: string; security: Me
                   <Text style={styles.successSecondaryText}>New sale</Text>
                 </Pressable>
               </View>
-              {completedSale.method === 'STRIPE_TERMINAL' && !completedSale.refunded && (
+              {data?.isPromoter && completedSale.method === 'STRIPE_TERMINAL' && !completedSale.refunded && (
                 <Pressable disabled={working} style={styles.refundButton} onPress={() => void refundCompletedSale()}>
                   <Text style={styles.refundButtonText}>{working ? 'Refunding…' : 'Refund payment'}</Text>
                 </Pressable>
@@ -429,6 +438,9 @@ const styles = StyleSheet.create({
   eyebrow: { color: '#7c3aed', fontSize: 10, fontWeight: '900', letterSpacing: 1.6, marginTop: 16 },
   title: { fontSize: 30, fontWeight: '900', color: '#111827', marginTop: 6 },
   copy: { color: '#6b7280', marginTop: 6, marginBottom: 12 },
+  activityCard: { borderRadius: 14, backgroundColor: '#f5f3ff', borderWidth: 1, borderColor: '#ddd6fe', padding: 13, marginBottom: 4 },
+  activityLabel: { color: '#6d28d9', fontSize: 9, fontWeight: '900', letterSpacing: 1.1 },
+  activityValue: { color: '#312e81', fontSize: 12, fontWeight: '900', marginTop: 5 },
   securityCard: { borderRadius: 16, borderWidth: 1, borderColor: '#ddd6fe', backgroundColor: '#faf8ff', padding: 14, marginTop: 8 },
   securityTitle: { color: '#4c1d95', fontSize: 13, fontWeight: '900' },
   securityCopy: { color: '#5b556b', fontSize: 11, lineHeight: 17, marginTop: 5 },

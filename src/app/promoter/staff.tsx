@@ -56,6 +56,7 @@ export default function PromoterStaffScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [email, setEmail] = useState('');
+  const [role, setRole] = useState<'BOX_OFFICE' | 'CHECK_IN' | 'MANAGER'>('BOX_OFFICE');
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editingEvents, setEditingEvents] = useState<string[]>([]);
@@ -103,19 +104,19 @@ export default function PromoterStaffScreen() {
 
   async function addStaff() {
     if (!sessionToken || saving) return;
-    if (!email.trim()) return Alert.alert('Email required', 'Enter the staff member’s OutNow account email.');
-    if (!selectedEvents.length) return Alert.alert('Choose an event', 'Select at least one event for scanner access.');
+    if (!email.trim()) return Alert.alert('Email required', 'Enter the staff member’s email address.');
+    if (!selectedEvents.length) return Alert.alert('Choose an event', 'Select at least one event for this staff member.');
     try {
       setSaving(true);
       await apiRequest(
         '/api/mobile/promoter/staff',
-        { method: 'POST', body: JSON.stringify({ email: email.trim(), eventIds: selectedEvents }) },
+        { method: 'POST', body: JSON.stringify({ email: email.trim(), eventIds: selectedEvents, role }) },
         sessionToken,
       );
       setEmail('');
       setSelectedEvents([]);
       await load(true);
-      Alert.alert('Scanner access added', 'The staff member can now scan tickets for the selected events.');
+      Alert.alert('Staff invitation sent', 'Access is limited to the selected events and activates when the recipient signs in.');
     } catch (err) {
       Alert.alert('Could not add staff', err instanceof Error ? err.message : 'Please try again.');
     } finally {
@@ -185,15 +186,15 @@ export default function PromoterStaffScreen() {
             <View style={{ width: 40 }} />
           </View>
 
-          <Text style={styles.eyebrow}>SCANNER ACCESS</Text>
+          <Text style={styles.eyebrow}>EVENT-ONLY ACCESS</Text>
           <Text style={[styles.title, { color: colors.text }]}>Event staff</Text>
-          <Text style={[styles.copy, { color: colors.sub }]}>Give trusted staff scanner access without giving them promoter, finance or event-management access.</Text>
+          <Text style={[styles.copy, { color: colors.sub }]}>Give trusted staff operational event access without giving them promoter, finance or event-management access.</Text>
 
           {!!error && <View style={styles.error}><Text style={styles.errorText}>{error}</Text></View>}
 
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>Add staff member</Text>
-            <Text style={[styles.help, { color: colors.sub }]}>They need an OutNow account with this email. You can assign one or more events.</Text>
+            <Text style={[styles.help, { color: colors.sub }]}>Select the event-only role and one or more events. If they do not have an account yet, we will email an invitation.</Text>
             <TextInput
               value={email}
               onChangeText={setEmail}
@@ -204,7 +205,19 @@ export default function PromoterStaffScreen() {
               placeholderTextColor={dark ? '#6b7280' : '#9ca3af'}
               style={[styles.input, { color: colors.text, backgroundColor: colors.soft, borderColor: colors.border }]}
             />
-            <Text style={[styles.label, { color: colors.text }]}>Events they can scan</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Role</Text>
+            <View style={styles.roleChoices}>
+              {([
+                ['BOX_OFFICE', 'Box Office'],
+                ['CHECK_IN', 'Check-in'],
+                ['MANAGER', 'Manager'],
+              ] as const).map(([value, label]) => {
+                const active = role === value;
+                return <Pressable key={value} onPress={() => setRole(value)} style={[styles.roleChoice, { borderColor: active ? '#7c3aed' : colors.border, backgroundColor: active ? (dark ? '#24143d' : '#f5f3ff') : colors.soft }]}><Text style={[styles.roleChoiceText, { color: active ? '#7c3aed' : colors.text }]}>{label}</Text></Pressable>;
+              })}
+            </View>
+            <Text style={[styles.help, { color: colors.sub }]}>{role === 'BOX_OFFICE' ? 'Box Office can scan, sell tickets, take Tap to Pay or cash, issue complimentary tickets and view door-sales activity.' : role === 'CHECK_IN' ? 'Check-in can scan tickets for entry only.' : 'Manager has all event-only Box Office and check-in capabilities.'}</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Assigned events</Text>
             <View style={styles.chips}>
               {events.map((event) => {
                 const active = selectedEvents.includes(event.id);
@@ -216,9 +229,9 @@ export default function PromoterStaffScreen() {
                 );
               })}
             </View>
-            {!events.length && <Text style={[styles.emptyText, { color: colors.sub }]}>Create an event before assigning scanner staff.</Text>}
+            {!events.length && <Text style={[styles.emptyText, { color: colors.sub }]}>Create an event before assigning staff.</Text>}
             <Pressable style={[styles.primary, (saving || !events.length) && styles.disabled]} disabled={saving || !events.length} onPress={() => void addStaff()}>
-              {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Assign scanner access</Text>}
+              {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Invite staff member</Text>}
             </Pressable>
           </View>
 
@@ -230,7 +243,7 @@ export default function PromoterStaffScreen() {
           {!staff.length ? (
             <View style={[styles.empty, { backgroundColor: colors.soft, borderColor: colors.border }]}>
               <Text style={[styles.cardTitle, { color: colors.text }]}>No staff assigned</Text>
-              <Text style={[styles.help, { color: colors.sub }]}>Add a staff member above when you are ready to give scanner access.</Text>
+              <Text style={[styles.help, { color: colors.sub }]}>Invite a staff member above when you are ready to give event access.</Text>
             </View>
           ) : (
             <View style={{ gap: 12 }}>
@@ -249,7 +262,7 @@ export default function PromoterStaffScreen() {
 
                     {editing ? (
                       <>
-                        <Text style={[styles.label, { color: colors.text }]}>Scanner events</Text>
+                        <Text style={[styles.label, { color: colors.text }]}>Assigned events</Text>
                         <View style={styles.chips}>
                           {events.map((event) => {
                             const active = editingEvents.includes(event.id);
@@ -273,7 +286,7 @@ export default function PromoterStaffScreen() {
                           {member.assignments.map((assignment) => (
                             <View key={assignment.assignmentId} style={[styles.assignment, { backgroundColor: colors.soft }]}>
                               <View style={{ flex: 1 }}><Text style={[styles.assignmentTitle, { color: colors.text }]}>{assignment.eventTitle}</Text><Text style={[styles.eventChipMeta, { color: colors.sub }]}>{eventDate(assignment.eventDate)}</Text></View>
-                              <Text style={styles.role}>SCANNER</Text>
+                              <Text style={styles.role}>{assignment.role.replaceAll('_', ' ')}</Text>
                             </View>
                           ))}
                         </View>
@@ -312,6 +325,9 @@ const styles = StyleSheet.create({
   help: { fontSize: 11, lineHeight: 17, marginTop: 5 },
   input: { height: 50, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, marginTop: 16, fontSize: 14 },
   label: { fontSize: 11, fontWeight: '900', marginTop: 16, marginBottom: 9 },
+  roleChoices: { flexDirection: 'row', gap: 7 },
+  roleChoice: { flex: 1, minHeight: 42, borderWidth: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
+  roleChoiceText: { fontSize: 9, fontWeight: '900', textAlign: 'center' },
   chips: { gap: 8 },
   eventChip: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10 },
   eventChipTitle: { fontSize: 12, fontWeight: '900' },
