@@ -45,6 +45,13 @@ type StaffResponse = {
   staff: StaffMember[];
 };
 
+type StaffInvitationResponse = {
+  success: true;
+  activated: boolean;
+  emailed?: boolean;
+  message: string;
+};
+
 const eventDate = (value: string) =>
   new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value));
 
@@ -108,7 +115,7 @@ export default function PromoterStaffScreen() {
     if (!selectedEvents.length) return Alert.alert('Choose an event', 'Select at least one event for this staff member.');
     try {
       setSaving(true);
-      await apiRequest(
+      const result = await apiRequest<StaffInvitationResponse>(
         '/api/mobile/promoter/staff',
         { method: 'POST', body: JSON.stringify({ email: email.trim(), eventIds: selectedEvents, role }) },
         sessionToken,
@@ -116,7 +123,14 @@ export default function PromoterStaffScreen() {
       setEmail('');
       setSelectedEvents([]);
       await load(true);
-      Alert.alert('Staff invitation sent', 'Access is limited to the selected events and activates when the recipient signs in.');
+      Alert.alert(
+        result.activated ? 'Staff access assigned' : result.emailed ? 'Staff invitation sent' : 'Staff invitation saved',
+        result.activated
+          ? 'Access is limited to the selected events.'
+          : result.emailed
+            ? 'Access activates when the recipient signs in with this email.'
+            : 'Share the invitation with them; access activates when they sign in with this email.',
+      );
     } catch (err) {
       Alert.alert('Could not add staff', err instanceof Error ? err.message : 'Please try again.');
     } finally {
