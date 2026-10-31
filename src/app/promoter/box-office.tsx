@@ -58,7 +58,7 @@ function BoxOfficeContent({ eventId, security }: { eventId: string; security: Me
   const [readerReady, setReaderReady] = useState(false);
   const [educationVisible, setEducationVisible] = useState(false);
   const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
-  const { initialize, easyConnect, retrievePaymentIntent, collectPaymentMethod, processPaymentIntent } = useStripeTerminal();
+  const { initialize, easyConnect, disconnectReader, getConnectionStatus, retrievePaymentIntent, collectPaymentMethod, processPaymentIntent } = useStripeTerminal();
 
   const load = useCallback(async () => {
     if (!sessionToken || !eventId) return;
@@ -117,6 +117,13 @@ function BoxOfficeContent({ eventId, security }: { eventId: string; security: Me
       if (!locationId) throw new Error('Stripe Terminal location is not configured in this build.');
       const initialized = await initialize();
       if (initialized.error) throw new Error(initialized.error.message);
+      const connectionStatus = await getConnectionStatus();
+      if (connectionStatus === 'connected' || connectionStatus === 'connecting' || connectionStatus === 'reconnecting') {
+        const disconnection = await disconnectReader();
+        if (!disconnection || disconnection.error) {
+          throw new Error(disconnection?.error?.message || 'Unable to disconnect the existing Tap to Pay reader.');
+        }
+      }
       const connection = await easyConnect({
         discoveryMethod: 'tapToPay',
         locationId,
@@ -155,6 +162,22 @@ function BoxOfficeContent({ eventId, security }: { eventId: string; security: Me
     try { await SecureStore.setItemAsync(TAP_TO_PAY_EDUCATION_KEY, 'seen'); } catch { /* non-blocking */ }
     setEducationVisible(false);
     await performTapToPayConnection();
+  }
+
+  async function disconnectTapToPay() {
+    try {
+      setWorking(true);
+      setError('');
+      const disconnection = await disconnectReader();
+      if (!disconnection || disconnection.error) {
+        throw new Error(disconnection?.error?.message || 'Unable to disconnect Tap to Pay.');
+      }
+      setReaderReady(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unable to disconnect Tap to Pay.');
+    } finally {
+      setWorking(false);
+    }
   }
 
   async function submit() {
@@ -373,7 +396,12 @@ function BoxOfficeContent({ eventId, security }: { eventId: string; security: Me
               <Text style={styles.readerText}>{working ? 'Connecting…' : 'Connect Tap to Pay'}</Text>
             </Pressable>
           )}
-          {method === 'STRIPE_TERMINAL' && readerReady && <Text style={styles.ready}>✓ Tap to Pay is ready</Text>}
+          {method === 'STRIPE_TERMINAL' && readerReady && <>
+            <Text style={styles.ready}>✓ Tap to Pay is ready</Text>
+            <Pressable disabled={working} onPress={() => void disconnectTapToPay()} style={[styles.reader, styles.disconnectReader]}>
+              <Text style={styles.disconnectReaderText}>{working ? 'Disconnecting…' : 'Disconnect Tap to Pay'}</Text>
+            </Pressable>
+          </>}
 
           <View style={styles.total}>
             <Text style={styles.totalLabel}>Total</Text>
@@ -466,6 +494,8 @@ const styles = StyleSheet.create({
   policy: { fontSize: 11, lineHeight: 16, color: '#6b7280', marginTop: 10 },
   reader: { height: 48, borderRadius: 13, borderWidth: 1, borderColor: '#7c3aed', alignItems: 'center', justifyContent: 'center', marginTop: 12 },
   readerText: { color: '#6d28d9', fontWeight: '900' },
+  disconnectReader: { borderColor: '#d1d5db', backgroundColor: '#fff' },
+  disconnectReaderText: { color: '#4b5563', fontWeight: '900' },
   ready: { marginTop: 12, color: '#047857', fontSize: 12, fontWeight: '800' },
   total: { marginTop: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#e5e7eb', paddingTop: 16 },
   totalLabel: { fontSize: 15, fontWeight: '800' },
