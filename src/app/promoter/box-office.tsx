@@ -33,7 +33,7 @@ type CompletedSale = {
   orderId: string;
   amountPence: number;
   ticketCount: number;
-  method: 'STRIPE_TERMINAL' | 'CASH' | 'FREE' | 'COMPLIMENTARY';
+  method: 'STRIPE_TERMINAL' | 'FREE' | 'COMPLIMENTARY';
   emailSent: boolean;
   emailProvided: boolean;
   refunded: boolean;
@@ -51,7 +51,7 @@ function BoxOfficeContent({ eventId, security }: { eventId: string; security: Me
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [method, setMethod] = useState<'STRIPE_TERMINAL' | 'CASH' | 'FREE' | 'COMPLIMENTARY'>('CASH');
+  const [method, setMethod] = useState<'STRIPE_TERMINAL' | 'FREE' | 'COMPLIMENTARY'>('STRIPE_TERMINAL');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [working, setWorking] = useState(false);
@@ -92,9 +92,9 @@ function BoxOfficeContent({ eventId, security }: { eventId: string; security: Me
   const isGenuineFree = subtotal === 0;
   const availableMethods = useMemo(() => isGenuineFree
     ? (['FREE'] as const)
-    : (['CASH', 'STRIPE_TERMINAL', ...(data?.permissions.includes('ISSUE_COMPLIMENTARY') ? ['COMPLIMENTARY' as const] : [])] as const),
+    : (['STRIPE_TERMINAL', ...(data?.permissions.includes('ISSUE_COMPLIMENTARY') ? ['COMPLIMENTARY' as const] : [])] as const),
   [data?.permissions, isGenuineFree]);
-  const total = method === 'FREE' || method === 'COMPLIMENTARY' ? 0 : method === 'CASH' ? subtotal : subtotal * 1.05;
+  const total = method === 'FREE' || method === 'COMPLIMENTARY' ? 0 : subtotal * 1.05;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -384,12 +384,12 @@ function BoxOfficeContent({ eventId, security }: { eventId: string; security: Me
             {availableMethods.map((value) => (
               <Pressable key={value} onPress={() => setMethod(value)} style={[styles.method, method === value && styles.methodActive]}>
                 <Text style={[styles.methodText, method === value && styles.methodTextActive]}>
-                  {value === 'STRIPE_TERMINAL' ? 'CARD / TAP' : value === 'COMPLIMENTARY' ? 'COMPLIMENTARY' : value === 'FREE' ? 'FREE / ISSUE' : 'CASH'}
+                  {value === 'STRIPE_TERMINAL' ? 'CARD / TAP' : value === 'COMPLIMENTARY' ? 'COMPLIMENTARY' : 'FREE / ISSUE'}
                 </Text>
               </Pressable>
             ))}
           </View>
-          <Text style={styles.policy}>{method === 'CASH' ? data?.feePolicy.cash : method === 'COMPLIMENTARY' ? data?.feePolicy.complimentary : method === 'FREE' ? data?.feePolicy.free : data?.feePolicy.terminal}</Text>
+          <Text style={styles.policy}>{method === 'COMPLIMENTARY' ? data?.feePolicy.complimentary : method === 'FREE' ? data?.feePolicy.free : data?.feePolicy.terminal}</Text>
 
           {method === 'STRIPE_TERMINAL' && !readerReady && (
             <Pressable disabled={working} onPress={() => void connectTapToPay()} style={styles.reader}>
@@ -409,7 +409,7 @@ function BoxOfficeContent({ eventId, security }: { eventId: string; security: Me
           </View>
           <Pressable disabled={working || !lines.length} onPress={() => void submit()} style={[styles.pay, (!lines.length || working) && styles.disabled]}>
             {working ? <ActivityIndicator color="#fff" /> : (
-              <Text style={styles.payText}>{method === 'CASH' ? 'Record cash sale' : method === 'FREE' ? 'Issue free ticket' : method === 'COMPLIMENTARY' ? 'Issue complimentary ticket' : 'Take payment'}</Text>
+              <Text style={styles.payText}>{method === 'FREE' ? 'Issue free ticket' : method === 'COMPLIMENTARY' ? 'Issue complimentary ticket' : 'Take payment'}</Text>
             )}
           </Pressable>
           <Text style={styles.notice}>Tap to Pay requires a development or production build; Expo Go cannot use Stripe Terminal.</Text>
