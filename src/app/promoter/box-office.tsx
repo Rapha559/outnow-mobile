@@ -121,6 +121,7 @@ function BoxOfficeContent({ eventId, security }: { eventId: string; security: Me
         discoveryMethod: 'tapToPay',
         locationId,
         merchantDisplayName: 'OutNow Tickets',
+        simulated: __DEV__,
       });
       if (connection.error) throw new Error(connection.error.message);
       setReaderReady(true);
@@ -390,12 +391,14 @@ function BoxOfficeContent({ eventId, security }: { eventId: string; security: Me
       <Modal visible={educationVisible} animationType="slide" transparent onRequestClose={() => setEducationVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.educationCard}>
-            <Text style={styles.educationEyebrow}>TAP TO PAY ON IPHONE</Text>
-            <Text style={styles.educationTitle}>Your iPhone is the card reader</Text>
-            <Text style={styles.educationCopy}>Accept contactless debit and credit cards, Apple Pay, and other supported digital wallets directly on this iPhone. No separate card reader is needed.</Text>
+            <Text style={styles.educationEyebrow}>TAP TO PAY ON {Platform.OS === 'android' ? 'ANDROID' : 'IPHONE'}</Text>
+            <Text style={styles.educationTitle}>Your {Platform.OS === 'android' ? 'Android phone' : 'iPhone'} is the card reader</Text>
+            <Text style={styles.educationCopy}>{Platform.OS === 'android'
+              ? 'Accept contactless debit and credit cards and supported digital wallets directly on this Android phone. No separate card reader is needed.'
+              : 'Accept contactless debit and credit cards, Apple Pay, and other supported digital wallets directly on this iPhone. No separate card reader is needed.'}</Text>
             <View style={styles.educationStep}><Text style={styles.educationNumber}>1</Text><Text style={styles.educationStepText}>Confirm the ticket total before starting payment.</Text></View>
-            <View style={styles.educationStep}><Text style={styles.educationNumber}>2</Text><Text style={styles.educationStepText}>Ask the customer to hold their contactless card or device near the top of the iPhone when prompted.</Text></View>
-            <View style={styles.educationStep}><Text style={styles.educationNumber}>3</Text><Text style={styles.educationStepText}>Keep the iPhone still until the payment is approved or declined.</Text></View>
+            <View style={styles.educationStep}><Text style={styles.educationNumber}>2</Text><Text style={styles.educationStepText}>{Platform.OS === 'android' ? 'Ask the customer to hold their contactless card or device near the back of the Android phone when prompted.' : 'Ask the customer to hold their contactless card or device near the top of the iPhone when prompted.'}</Text></View>
+            <View style={styles.educationStep}><Text style={styles.educationNumber}>3</Text><Text style={styles.educationStepText}>Keep the {Platform.OS === 'android' ? 'Android phone' : 'iPhone'} still until the payment is approved or declined.</Text></View>
             <Text style={styles.educationFootnote}>{Platform.OS === 'ios' ? 'Apple and Stripe will display the secure payment interface.' : 'Stripe will display the secure contactless payment interface.'}</Text>
             <Pressable style={styles.educationContinue} onPress={() => void continueFromEducation()}><Text style={styles.educationContinueText}>Continue</Text></Pressable>
             <Pressable style={styles.educationCancel} onPress={() => setEducationVisible(false)}><Text style={styles.educationCancelText}>Not now</Text></Pressable>
