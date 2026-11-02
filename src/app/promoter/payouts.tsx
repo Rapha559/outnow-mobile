@@ -1,7 +1,7 @@
 import * as WebBrowser from 'expo-web-browser';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, AppState, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/auth-context';
@@ -17,18 +17,108 @@ type PayoutResponse={
 };
 type StripeStatus={success:true;connected:boolean;onboardingDone:boolean;chargesEnabled:boolean;payoutsEnabled:boolean;currentlyDue:string[];pastDue:string[];disabledReason:string|null};
 type StripeStart={success:true;url:string};
+type InstantPayoutStatus={
+  success:true;
+  availablePence:number;
+  pendingPence:number;
+  instantSupported:boolean;
+  canInstantPayout:boolean;
+  destination:{type:'bank_account'|'card';last4:string|null;bankName:string|null}|null;
+};
+type InstantPayoutResult={success:true;payoutId:string;amountPence:number;status:string;arrivalDate:number|null};
+
 function money(value:number){return `£${value.toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})}`;}
+function moneyFromPence(value:number){return money((value||0)/100);}
 function dateTime(value:string|null){if(!value)return '—';const d=new Date(value);return Number.isNaN(d.getTime())?value:new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'}).format(d);}
+function payoutRequestKey(){return `mobile_${Date.now()}_${Math.random().toString(36).slice(2,12)}`;}
 
 export default function PromoterPayoutsScreen(){
   const {stripe:stripeReturn}=useLocalSearchParams<{stripe?:string}>();
-  const {user,sessionToken}=useAuth();const [data,setData]=useState<PayoutResponse|null>(null);const [stripe,setStripe]=useState<StripeStatus|null>(null);const [loading,setLoading]=useState(true);const [refreshing,setRefreshing]=useState(false);const [connecting,setConnecting]=useState(false);const [error,setError]=useState('');const [notice,setNotice]=useState('');
-  const load=useCallback(async(refresh=false)=>{if(!sessionToken||user?.role!=='PROMOTER')return;try{refresh?setRefreshing(true):setLoading(true);setError('');const [payouts,stripeStatus]=await Promise.all([apiRequest<PayoutResponse>('/api/mobile/promoter/payouts',{},sessionToken),apiRequest<StripeStatus>('/api/mobile/promoter/stripe',{},sessionToken)]);setData(payouts);setStripe(stripeStatus);}catch(err){setError(err instanceof Error?err.message:'Unable to load payouts.');}finally{setLoading(false);setRefreshing(false);}},[sessionToken,user?.role]);
+  const {user,sessionToken}=useAuth();
+  const [data,setData]=useState<PayoutResponse|null>(null);
+  const [stripe,setStripe]=useState<StripeStatus|null>(null);
+  const [instant,setInstant]=useState<InstantPayoutStatus|null>(null);
+  const [loading,setLoading]=useState(true);
+  const [refreshing,setRefreshing]=useState(false);
+  const [connecting,setConnecting]=useState(false);
+  const [instantLoading,setInstantLoading]=useState(false);
+  const [instantSubmitting,setInstantSubmitting]=useState(false);
+  const [error,setError]=useState('');
+  const [instantError,setInstantError]=useState('');
+  const [notice,setNotice]=useState('');
+
+  const load=useCallback(async(refresh=false)=>{
+    if(!sessionToken||user?.role!=='PROMOTER')return;
+    try{
+      refresh?setRefreshing(true):setLoading(true);
+      setError('');
+      const [payouts,stripeStatus]=await Promise.all([
+        apiRequest<PayoutResponse>('/api/mobile/promoter/payouts',{},sessionToken),
+        apiRequest<StripeStatus>('/api/mobile/promoter/stripe',{},sessionToken),
+      ]);
+      setData(payouts);
+      setStripe(stripeStatus);
+
+      if(stripeStatus.payoutsEnabled){
+        try{
+          setInstantLoading(true);
+          setInstantError('');
+          const instantStatus=await apiRequest<InstantPayoutStatus>('/api/mobile/promoter/instant-payout',{},sessionToken);
+          setInstant(instantStatus);
+        }catch(err){
+          setInstant(null);
+          setInstantError(err instanceof Error?err.message:'Unable to load instant payout status.');
+        }finally{
+          setInstantLoading(false);
+        }
+      }else{
+        setInstant(null);
+        setInstantError('');
+      }
+    }catch(err){
+      setError(err instanceof Error?err.message:'Unable to load payouts.');
+    }finally{
+      setLoading(false);
+      setRefreshing(false);
+    }
+  },[sessionToken,user?.role]);
+
   useEffect(()=>{void load();},[load]);
   useEffect(()=>{const subscription=AppState.addEventListener('change',(state)=>{if(state==='active')void load(true);});return()=>subscription.remove();},[load]);
   useEffect(()=>{if(stripeReturn==='complete'){setNotice('Stripe setup finished. We refreshed your payout status.');void load(true);}else if(stripeReturn==='refresh'){setNotice('Your Stripe setup link expired or needs to be renewed. Tap Continue Stripe setup to resume securely.');void load(true);}},[stripeReturn,load]);
+
   async function connectStripe(){if(!sessionToken)return;try{setConnecting(true);setError('');setNotice('');const response=await apiRequest<StripeStart>('/api/mobile/promoter/stripe',{method:'POST'},sessionToken);await WebBrowser.openBrowserAsync(response.url);setTimeout(()=>void load(true),600);}catch(err){setError(err instanceof Error?err.message:'Unable to start Stripe setup.');}finally{setConnecting(false);}}
   async function openStripeDashboard(){if(!sessionToken)return;try{setConnecting(true);setError('');const response=await apiRequest<StripeStart>('/api/mobile/promoter/stripe',{method:'POST',body:JSON.stringify({action:'dashboard'})},sessionToken);await WebBrowser.openBrowserAsync(response.url);}catch(err){setError(err instanceof Error?err.message:'Unable to open the Stripe dashboard.');}finally{setConnecting(false);}}
+
+  async function performInstantPayout(){
+    if(!sessionToken||!instant?.canInstantPayout||instantSubmitting)return;
+    try{
+      setInstantSubmitting(true);
+      setInstantError('');
+      const result=await apiRequest<InstantPayoutResult>('/api/mobile/promoter/instant-payout',{
+        method:'POST',
+        body:JSON.stringify({idempotencyKey:payoutRequestKey()}),
+      },sessionToken);
+      setNotice(`Instant payout requested for ${moneyFromPence(result.amountPence)}. Stripe payout ID: ${result.payoutId}`);
+      await load(true);
+    }catch(err){
+      setInstantError(err instanceof Error?err.message:'Instant payout failed.');
+    }finally{
+      setInstantSubmitting(false);
+    }
+  }
+
+  function confirmInstantPayout(){
+    if(!instant?.canInstantPayout)return;
+    Alert.alert(
+      'Instant payout',
+      `Send ${moneyFromPence(instant.availablePence)} to your eligible Stripe payout destination now? Stripe may charge an instant payout fee.`,
+      [
+        {text:'Cancel',style:'cancel'},
+        {text:'Pay out now',onPress:()=>void performInstantPayout()},
+      ],
+    );
+  }
 
   const nextExpected=useMemo(()=>{
     if(!data)return null;
@@ -43,6 +133,10 @@ export default function PromoterPayoutsScreen(){
     if(data.balance.pending>0)return {title:'Waiting for event completion',copy:`${money(data.balance.pending)} is still pending and will be released after the relevant event finishes.`};
     return {title:'No payout waiting',copy:'New eligible sales will appear here automatically.'};
   },[data,stripe?.payoutsEnabled]);
+
+  const instantDestination=instant?.destination
+    ? `${instant.destination.bankName||(instant.destination.type==='card'?'Card':'Bank account')} ending ${instant.destination.last4||'••••'}`
+    : 'Connected payout account';
 
   return <View style={styles.screen}><SafeAreaView edges={['top']} style={styles.safe}><View style={styles.top}><Pressable style={styles.circle} onPress={()=>router.back()}><Text style={styles.back}>‹</Text></Pressable><Text style={styles.topTitle}>Payouts</Text><Pressable style={styles.circle} onPress={()=>void load(true)}><Text style={styles.refresh}>↻</Text></Pressable></View><ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={()=>void load(true)} colors={['#7c3aed']} tintColor="#7c3aed"/>}>
     <Text style={styles.eyebrow}>PROMOTER PORTAL</Text><Text style={styles.title}>Payouts & Stripe</Text><Text style={styles.copy}>See exactly where your money is and what needs to happen before it reaches your Stripe account.</Text>
@@ -59,6 +153,19 @@ export default function PromoterPayoutsScreen(){
       <View style={styles.grid}><Metric label="Pending" value={money(data.balance.pending)} helper="Event not finished yet"/><Metric label="Available" value={money(data.balance.available)} helper="Ready for payout job"/><Metric label="Processing" value={money(data.balance.processing)} helper="Transfer reserved"/><Metric label="Paid out" value={money(data.balance.paid)} helper="Already sent"/></View>
       {data.balance.outstandingDebt>0&&<View style={styles.debt}><Text style={styles.debtTitle}>Outstanding balance</Text><Text style={styles.debtAmount}>{money(data.balance.outstandingDebt)}</Text><Text style={styles.copy}>Future released earnings will offset this before a new payout can be sent.</Text></View>}
 
+      {!!stripe?.payoutsEnabled&&<View style={styles.instantCard}>
+        <View style={styles.instantHeader}><View style={{flex:1}}><Text style={styles.statusLabel}>STRIPE INSTANT PAYOUT</Text><Text style={styles.instantTitle}>Get available Stripe funds sooner</Text><Text style={styles.statusCopy}>{instantDestination}</Text></View><Text style={styles.bolt}>⚡</Text></View>
+        {instantLoading?<View style={styles.instantLoading}><ActivityIndicator color="#7c3aed"/></View>:instant?<>
+          <View style={styles.instantAmounts}><View style={styles.instantAmountBox}><Text style={styles.metricLabel}>Available now</Text><Text style={styles.instantAmount}>{moneyFromPence(instant.availablePence)}</Text></View><View style={styles.instantAmountBox}><Text style={styles.metricLabel}>Still pending</Text><Text style={styles.instantAmount}>{moneyFromPence(instant.pendingPence)}</Text></View></View>
+          {!instant.instantSupported&&<Text style={styles.instantNotice}>Stripe does not currently offer Instant Payouts for this connected payout account.</Text>}
+          {instant.instantSupported&&instant.availablePence<=0&&instant.pendingPence>0&&<Text style={styles.instantNotice}>Your money is still pending at Stripe. Instant payout will unlock when Stripe makes the balance available.</Text>}
+          {instant.instantSupported&&instant.availablePence<=0&&instant.pendingPence<=0&&<Text style={styles.instantNotice}>There is no available connected-account balance to pay out right now.</Text>}
+          {!!instantError&&<Text style={styles.instantError}>{instantError}</Text>}
+          <Pressable disabled={!instant.canInstantPayout||instantSubmitting} style={[styles.instantButton,(!instant.canInstantPayout||instantSubmitting)&&styles.instantButtonDisabled]} onPress={confirmInstantPayout}>{instantSubmitting?<ActivityIndicator color="#fff"/>:<Text style={styles.instantButtonText}>{instant.availablePence>0?`Instant payout ${moneyFromPence(instant.availablePence)}`:'Instant payout'}</Text>}</Pressable>
+          <Text style={styles.instantFootnote}>Stripe eligibility and fees apply. Only funds Stripe marks as available can be paid out instantly.</Text>
+        </>:<Text style={styles.instantNotice}>{instantError||'Instant payout status is unavailable.'}</Text>}
+      </View>}
+
       <View style={styles.section}><Text style={styles.sectionTitle}>How payout timing works</Text><Step number="1" title="Customer pays" text="Your promoter share starts in Pending while the event is still upcoming."/><Step number="2" title="Event finishes" text="Eligible pending money is released to Available after the event end time."/><Step number="3" title="Daily payout run" text="OutNow checks available balances each day at 00:00 UTC."/><Step number="4" title="Stripe receives transfer" text="If Stripe payouts are enabled and nothing is blocking the balance, the transfer is created and then marked Paid out when completed."/><Text style={styles.schedule}>Daily OutNow payout job: 00:00 UTC</Text></View>
 
       <View style={styles.section}><Text style={styles.sectionTitle}>Event balances</Text>{data.eventBalances.length===0?<View style={styles.emptyInline}><Text style={styles.emptyTitle}>No event balances yet</Text><Text style={styles.copy}>Event payout balances will appear after paid ticket sales.</Text></View>:data.eventBalances.map(item=><View key={item.id} style={styles.row}><View style={{flex:1}}><Text style={styles.rowTitle}>{item.eventTitle}</Text><Text style={styles.meta}>{item.eventStatus.replace(/_/g,' ')} · event ends {dateTime(item.eventEnd)}</Text><Text style={styles.meta}>{item.releasedAt?`Funds released ${dateTime(item.releasedAt)}`:item.expectedPayoutCheckAt?`Expected payout check ${dateTime(item.expectedPayoutCheckAt)}`:'Waiting for event completion'}</Text><Text style={styles.balanceBreakdown}>Pending {money(item.pending)} · Available {money(item.available)} · Processing {money(item.processing)}</Text></View><Text style={styles.rowAmount}>{money(item.pending+item.available+item.processing+item.paid)}</Text></View>)}</View>
@@ -69,4 +176,4 @@ export default function PromoterPayoutsScreen(){
 }
 function Metric({label,value,helper}:{label:string;value:string;helper:string}){return <View style={styles.metric}><Text style={styles.metricLabel}>{label}</Text><Text style={styles.metricValue}>{value}</Text><Text style={styles.metricHelp}>{helper}</Text></View>}
 function Step({number,title,text}:{number:string;title:string;text:string}){return <View style={styles.step}><View style={styles.stepNo}><Text style={styles.stepNoText}>{number}</Text></View><View style={{flex:1}}><Text style={styles.stepTitle}>{title}</Text><Text style={styles.stepText}>{text}</Text></View></View>}
-const styles=StyleSheet.create({screen:{flex:1,backgroundColor:'#fff'},safe:{flex:1},top:{height:58,paddingHorizontal:18,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},circle:{width:40,height:40,borderRadius:20,borderWidth:1,borderColor:'#e5e7eb',backgroundColor:'#f9fafb',alignItems:'center',justifyContent:'center'},back:{fontSize:34,lineHeight:36,color:'#111827',marginTop:-3},refresh:{fontSize:20,color:'#7c3aed',fontWeight:'900'},topTitle:{color:'#111827',fontWeight:'900'},content:{paddingHorizontal:18},eyebrow:{color:'#7c3aed',fontSize:11,fontWeight:'900',letterSpacing:1.8,marginTop:10},title:{color:'#111827',fontSize:32,fontWeight:'900',marginTop:8},copy:{color:'#6b7280',fontSize:13,lineHeight:20,marginTop:7},state:{minHeight:220,marginTop:20,alignItems:'center',justifyContent:'center'},noticeBox:{marginTop:16,borderRadius:14,borderWidth:1,borderColor:'#bbf7d0',backgroundColor:'#f0fdf4',padding:12},notice:{color:'#166534',textAlign:'center',fontWeight:'700'},errorBox:{marginTop:16,borderRadius:14,borderWidth:1,borderColor:'#fecaca',backgroundColor:'#fef2f2',padding:12},error:{color:'#dc2626',textAlign:'center'},stripeCard:{marginTop:22,borderRadius:18,borderWidth:1,borderColor:'#e5e7eb',padding:16,flexDirection:'row',gap:12,alignItems:'center'},label:{color:'#7c3aed',fontSize:9,fontWeight:'900',letterSpacing:1.2},stripeTitle:{color:'#111827',fontSize:18,fontWeight:'900',marginTop:6},dot:{width:12,height:12,borderRadius:6,backgroundColor:'#f59e0b'},dotGood:{backgroundColor:'#22c55e'},primary:{height:50,borderRadius:15,backgroundColor:'#7c3aed',alignItems:'center',justifyContent:'center',marginTop:12},primaryText:{color:'#fff',fontWeight:'900'},secondary:{height:46,borderRadius:14,borderWidth:1,borderColor:'#d1d5db',alignItems:'center',justifyContent:'center',marginTop:10},secondaryText:{color:'#111827',fontWeight:'800'},statusCard:{marginTop:18,borderRadius:18,borderWidth:1,borderColor:'#ddd6fe',backgroundColor:'#faf8ff',padding:16},statusLabel:{color:'#7c3aed',fontSize:9,fontWeight:'900',letterSpacing:1.1},statusTitle:{color:'#111827',fontSize:18,fontWeight:'900',marginTop:7},statusCopy:{color:'#6b7280',fontSize:12,lineHeight:19,marginTop:6},nextCheck:{color:'#7c3aed',fontSize:12,fontWeight:'900',marginTop:12},grid:{flexDirection:'row',flexWrap:'wrap',justifyContent:'space-between',rowGap:10,marginTop:22},metric:{width:'48%',minHeight:112,borderRadius:17,borderWidth:1,borderColor:'#e5e7eb',padding:14},metricLabel:{color:'#6b7280',fontSize:11,fontWeight:'700'},metricValue:{color:'#111827',fontSize:20,fontWeight:'900',marginTop:10},metricHelp:{color:'#9ca3af',fontSize:10,lineHeight:15,marginTop:6},debt:{marginTop:14,borderRadius:17,borderWidth:1,borderColor:'#fecaca',backgroundColor:'#fef2f2',padding:15},debtTitle:{color:'#b91c1c',fontWeight:'900'},debtAmount:{color:'#991b1b',fontSize:20,fontWeight:'900',marginTop:5},section:{marginTop:24,borderRadius:18,borderWidth:1,borderColor:'#e5e7eb',padding:16},sectionTitle:{color:'#111827',fontSize:19,fontWeight:'900',marginBottom:6},schedule:{color:'#7c3aed',fontWeight:'900',fontSize:12,marginTop:14},step:{flexDirection:'row',gap:11,marginTop:14},stepNo:{width:28,height:28,borderRadius:14,backgroundColor:'#f3efff',alignItems:'center',justifyContent:'center'},stepNoText:{color:'#7c3aed',fontWeight:'900',fontSize:11},stepTitle:{color:'#111827',fontWeight:'900',fontSize:13},stepText:{color:'#6b7280',fontSize:11,lineHeight:17,marginTop:3},row:{flexDirection:'row',gap:12,alignItems:'flex-start',paddingVertical:12,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#e5e7eb'},rowTitle:{color:'#111827',fontWeight:'900',fontSize:14},meta:{color:'#6b7280',fontSize:11,lineHeight:17,marginTop:3},balanceBreakdown:{color:'#7c3aed',fontSize:10,fontWeight:'800',lineHeight:15,marginTop:5},rowAmount:{color:'#111827',fontWeight:'900',fontSize:13},errorSmall:{color:'#dc2626',fontSize:10,lineHeight:15,marginTop:4},emptyInline:{paddingVertical:14},emptyTitle:{color:'#111827',fontWeight:'900',fontSize:14}});
+const styles=StyleSheet.create({screen:{flex:1,backgroundColor:'#fff'},safe:{flex:1},top:{height:58,paddingHorizontal:18,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},circle:{width:40,height:40,borderRadius:20,borderWidth:1,borderColor:'#e5e7eb',backgroundColor:'#f9fafb',alignItems:'center',justifyContent:'center'},back:{fontSize:34,lineHeight:36,color:'#111827',marginTop:-3},refresh:{fontSize:20,color:'#7c3aed',fontWeight:'900'},topTitle:{color:'#111827',fontWeight:'900'},content:{paddingHorizontal:18},eyebrow:{color:'#7c3aed',fontSize:11,fontWeight:'900',letterSpacing:1.8,marginTop:10},title:{color:'#111827',fontSize:32,fontWeight:'900',marginTop:8},copy:{color:'#6b7280',fontSize:13,lineHeight:20,marginTop:7},state:{minHeight:220,marginTop:20,alignItems:'center',justifyContent:'center'},noticeBox:{marginTop:16,borderRadius:14,borderWidth:1,borderColor:'#bbf7d0',backgroundColor:'#f0fdf4',padding:12},notice:{color:'#166534',textAlign:'center',fontWeight:'700'},errorBox:{marginTop:16,borderRadius:14,borderWidth:1,borderColor:'#fecaca',backgroundColor:'#fef2f2',padding:12},error:{color:'#dc2626',textAlign:'center'},stripeCard:{marginTop:22,borderRadius:18,borderWidth:1,borderColor:'#e5e7eb',padding:16,flexDirection:'row',gap:12,alignItems:'center'},label:{color:'#7c3aed',fontSize:9,fontWeight:'900',letterSpacing:1.2},stripeTitle:{color:'#111827',fontSize:18,fontWeight:'900',marginTop:6},dot:{width:12,height:12,borderRadius:6,backgroundColor:'#f59e0b'},dotGood:{backgroundColor:'#22c55e'},primary:{height:50,borderRadius:15,backgroundColor:'#7c3aed',alignItems:'center',justifyContent:'center',marginTop:12},primaryText:{color:'#fff',fontWeight:'900'},secondary:{height:46,borderRadius:14,borderWidth:1,borderColor:'#d1d5db',alignItems:'center',justifyContent:'center',marginTop:10},secondaryText:{color:'#111827',fontWeight:'800'},statusCard:{marginTop:18,borderRadius:18,borderWidth:1,borderColor:'#ddd6fe',backgroundColor:'#faf8ff',padding:16},statusLabel:{color:'#7c3aed',fontSize:9,fontWeight:'900',letterSpacing:1.1},statusTitle:{color:'#111827',fontSize:18,fontWeight:'900',marginTop:7},statusCopy:{color:'#6b7280',fontSize:12,lineHeight:19,marginTop:6},nextCheck:{color:'#7c3aed',fontSize:12,fontWeight:'900',marginTop:12},grid:{flexDirection:'row',flexWrap:'wrap',justifyContent:'space-between',rowGap:10,marginTop:22},metric:{width:'48%',minHeight:112,borderRadius:17,borderWidth:1,borderColor:'#e5e7eb',padding:14},metricLabel:{color:'#6b7280',fontSize:11,fontWeight:'700'},metricValue:{color:'#111827',fontSize:20,fontWeight:'900',marginTop:10},metricHelp:{color:'#9ca3af',fontSize:10,lineHeight:15,marginTop:6},debt:{marginTop:14,borderRadius:17,borderWidth:1,borderColor:'#fecaca',backgroundColor:'#fef2f2',padding:15},debtTitle:{color:'#b91c1c',fontWeight:'900'},debtAmount:{color:'#991b1b',fontSize:20,fontWeight:'900',marginTop:5},instantCard:{marginTop:18,borderRadius:18,borderWidth:1,borderColor:'#ddd6fe',backgroundColor:'#faf8ff',padding:16},instantHeader:{flexDirection:'row',gap:12,alignItems:'flex-start'},instantTitle:{color:'#111827',fontSize:18,fontWeight:'900',marginTop:7},bolt:{fontSize:22},instantLoading:{paddingVertical:24,alignItems:'center'},instantAmounts:{flexDirection:'row',gap:10,marginTop:16},instantAmountBox:{flex:1,borderRadius:14,borderWidth:1,borderColor:'#e5e7eb',backgroundColor:'#fff',padding:12},instantAmount:{color:'#111827',fontSize:18,fontWeight:'900',marginTop:7},instantNotice:{color:'#6b7280',fontSize:12,lineHeight:18,marginTop:14},instantError:{color:'#dc2626',fontSize:12,lineHeight:18,marginTop:12},instantButton:{height:50,borderRadius:15,backgroundColor:'#7c3aed',alignItems:'center',justifyContent:'center',marginTop:16},instantButtonDisabled:{opacity:.45},instantButtonText:{color:'#fff',fontWeight:'900'},instantFootnote:{color:'#9ca3af',fontSize:10,lineHeight:15,marginTop:10},section:{marginTop:24,borderRadius:18,borderWidth:1,borderColor:'#e5e7eb',padding:16},sectionTitle:{color:'#111827',fontSize:19,fontWeight:'900',marginBottom:6},schedule:{color:'#7c3aed',fontWeight:'900',fontSize:12,marginTop:14},step:{flexDirection:'row',gap:11,marginTop:14},stepNo:{width:28,height:28,borderRadius:14,backgroundColor:'#f3efff',alignItems:'center',justifyContent:'center'},stepNoText:{color:'#7c3aed',fontWeight:'900',fontSize:11},stepTitle:{color:'#111827',fontWeight:'900',fontSize:13},stepText:{color:'#6b7280',fontSize:11,lineHeight:17,marginTop:3},row:{flexDirection:'row',gap:12,alignItems:'flex-start',paddingVertical:12,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#e5e7eb'},rowTitle:{color:'#111827',fontWeight:'900',fontSize:14},meta:{color:'#6b7280',fontSize:11,lineHeight:17,marginTop:3},balanceBreakdown:{color:'#7c3aed',fontSize:10,fontWeight:'800',lineHeight:15,marginTop:5},rowAmount:{color:'#111827',fontWeight:'900',fontSize:13},errorSmall:{color:'#dc2626',fontSize:10,lineHeight:15,marginTop:4},emptyInline:{paddingVertical:14},emptyTitle:{color:'#111827',fontWeight:'900',fontSize:14}});
