@@ -8,7 +8,9 @@ import { apiRequest } from '@/lib/api';
 import { startMobileGoogleAuth } from '@/lib/google-auth';
 import { useAuth } from '@/context/auth-context';
 
-type LoginResponse={success:true;requiresVerification:true;challengeToken:string;email:string;role:string};
+type LoginVerificationResponse={success:true;requiresVerification:true;challengeToken:string;email:string;role:string};
+type LoginSessionResponse={success:true;requiresVerification:false;sessionToken:string;expiresAt:string;user:{id:string;name:string;email:string;phone?:string|null;role:'CUSTOMER'|'PROMOTER'}};
+type LoginResponse=LoginVerificationResponse|LoginSessionResponse;
 type StaffAccessResponse={success:true;hasScannerAccess:boolean;assignments:Array<{id:string;role:'SCANNER'}>};
 
 function isSafeCustomerRedirect(value?:string){
@@ -30,7 +32,18 @@ export default function LoginScreen(){
     router.replace('/(tabs)');
   }
 
-  async function submit(){if(!email.trim()||!password){setError('Enter your email and password.');return;}try{setLoading(true);setError('');const data=await apiRequest<LoginResponse>('/api/mobile/auth/login',{method:'POST',body:JSON.stringify({email,password,rememberMe:true})});router.replace({pathname:'/verify',params:{mode:'login',challengeToken:data.challengeToken,maskedEmail:data.email,...(params.redirect?{redirect:params.redirect}:{})}});}catch(err){setError(err instanceof Error?err.message:'Unable to sign in.');}finally{setLoading(false);}}
+  async function continueAfterLogin(sessionToken:string,user:LoginSessionResponse['user']){
+    await saveSession(sessionToken,user);
+    if(user.role==='CUSTOMER'&&isSafeCustomerRedirect(params.redirect)){router.replace(params.redirect as never);return;}
+    if(user.role==='PROMOTER'){router.replace('/promoter/dashboard');return;}
+    try{
+      const staffAccess=await apiRequest<StaffAccessResponse>('/api/mobile/staff/access',{},sessionToken);
+      if(staffAccess.hasScannerAccess&&staffAccess.assignments.length>0){router.replace('/staff');return;}
+    }catch{}
+    router.replace('/(tabs)/profile');
+  }
+
+  async function submit(){if(!email.trim()||!password){setError('Enter your email and password.');return;}try{setLoading(true);setError('');const data=await apiRequest<LoginResponse>('/api/mobile/auth/login',{method:'POST',body:JSON.stringify({email,password,rememberMe:true})});if(!data.requiresVerification){await continueAfterLogin(data.sessionToken,data.user);return;}router.replace({pathname:'/verify',params:{mode:'login',challengeToken:data.challengeToken,maskedEmail:data.email,...(params.redirect?{redirect:params.redirect}:{})}});}catch(err){setError(err instanceof Error?err.message:'Unable to sign in.');}finally{setLoading(false);}}
   async function googleSignIn(){
     try{
       setGoogleLoading(true);setError('');
