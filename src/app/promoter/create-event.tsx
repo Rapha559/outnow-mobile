@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/auth-context';
 import { apiRequest } from '@/lib/api';
 import { pickAndUploadEventImage, pickAndUploadHeadlinerImage } from '@/lib/event-image-upload';
+import { ukEventEndToIso } from '@/lib/uk-event-date-time';
 
 type Category = { id: string; name: string; slug: string };
 type TicketDraft = { id: string; name: string; description: string; price: string; quantity: string; maxPerOrder: string };
@@ -48,6 +49,7 @@ export default function CreateEventScreen() {
   const [eventDate, setEventDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [doorsOpenTime, setDoorsOpenTime] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [endTime, setEndTime] = useState('');
   const [venue, setVenue] = useState('');
   const [address, setAddress] = useState('');
@@ -113,13 +115,17 @@ export default function CreateEventScreen() {
     if (seatingMode !== 'GENERAL_ADMISSION' && !seatingTemplateId) { setError('Choose a saved seating template for reserved or mixed seating.'); return; }
     if(taxProfile.vatRegistered&&ticketTaxTreatment!=='UK_STANDARD'&&!taxQualificationConfirmed){setError('Confirm that this event qualifies for the selected non-standard VAT treatment.');return;}
     if(waitlistEnabled&&!salesStart.trim()){setError('Set a future ticket sales start time before enabling the event waitlist.');return;}
+    if (endTime) {
+      try { ukEventEndToIso(eventDate, startTime, endTime, endDate || null); }
+      catch (err) { setError(err instanceof Error ? err.message : 'Enter a valid event end time.'); return; }
+    }
 
     try {
       setSubmitting(true); setError('');
       const response = await apiRequest<CreatedEvent>('/api/mobile/promoter/events', {
         method: 'POST',
         body: JSON.stringify({
-          title, description, ageRestriction, headlinerName, headlinerImageUrl, category, eventDate, startTime, doorsOpenTime, endTime,
+          title, description, ageRestriction, headlinerName, headlinerImageUrl, category, eventDate, startTime, doorsOpenTime, endDate, endTime,
           venue, address, city, postcode, image, refundPolicy, ticketTaxTreatment:'UK_STANDARD'===ticketTaxTreatment||taxProfile.vatRegistered?ticketTaxTreatment:'UK_STANDARD',taxQualificationConfirmed,
           salesStart:salesStart.trim(),salesEnd:salesEnd.trim(),waitlistEnabled,waitlistOpensAt:waitlistOpensAt.trim(),waitlistClosesAt:waitlistClosesAt.trim(),waitlistNotifyOnSale,waitlistMessage:waitlistMessage.trim(),
           seatingMode,seatingTemplateId:seatingMode==='GENERAL_ADMISSION'?undefined:seatingTemplateId,
@@ -149,7 +155,7 @@ export default function CreateEventScreen() {
     <Section title="Headliner"><Field label="Headliner name" value={headlinerName} onChangeText={setHeadlinerName} placeholder="e.g. Burna Boy" maxLength={160}/><Text style={styles.helper}>The main artist, performer or featured act.</Text><View style={styles.headlinerRow}>{headlinerImageUrl ? <Image source={{uri:headlinerImageUrl}} style={styles.headlinerImage} contentFit="cover"/> : <View style={styles.headlinerFallback}><Text style={styles.headlinerFallbackText}>{headlinerName.trim().charAt(0).toUpperCase() || 'H'}</Text></View>}<View style={styles.headlinerActions}><Pressable disabled={uploadingHeadliner} style={styles.imageButton} onPress={() => void chooseHeadlinerImage()}>{uploadingHeadliner?<ActivityIndicator color="#7c3aed"/>:<Text style={styles.imageButtonText}>{headlinerImageUrl?'Replace headliner photo':'Choose headliner photo'}</Text>}</Pressable>{!!headlinerImageUrl&&<Pressable onPress={()=>setHeadlinerImageUrl('')}><Text style={styles.removeText}>Remove photo</Text></Pressable>}</View></View></Section>
 
     <Section title="Category">{loadingCategories?<ActivityIndicator color="#7c3aed"/>:<View style={styles.chips}>{categories.map((item)=><Pressable key={item.id} onPress={()=>setCategory(item.slug)} style={[styles.chip,category===item.slug&&styles.chipSelected]}><Text style={[styles.chipText,category===item.slug&&styles.chipTextSelected]}>{item.name}</Text></Pressable>)}</View>}</Section>
-    <Section title="Date & time"><Field label="Event date *" value={eventDate} onChangeText={setEventDate} placeholder="YYYY-MM-DD"/><View style={styles.twoCol}><View style={styles.flex}><Field label="Start *" value={startTime} onChangeText={setStartTime} placeholder="19:30"/></View><View style={styles.flex}><Field label="Doors" value={doorsOpenTime} onChangeText={setDoorsOpenTime} placeholder="18:30"/></View></View><Field label="End time" value={endTime} onChangeText={setEndTime} placeholder="23:30"/></Section>
+    <Section title="Date & time"><Text style={styles.helper}>All event times are UK time (Europe/London).</Text><Field label="Event date *" value={eventDate} onChangeText={setEventDate} placeholder="YYYY-MM-DD"/><View style={styles.twoCol}><View style={styles.flex}><Field label="Start *" value={startTime} onChangeText={setStartTime} placeholder="19:30"/></View><View style={styles.flex}><Field label="Doors" value={doorsOpenTime} onChangeText={setDoorsOpenTime} placeholder="18:30"/></View></View><Field label="End time" value={endTime} onChangeText={setEndTime} placeholder="23:30"/><Field label="End date (optional)" value={endDate} onChangeText={setEndDate} placeholder="YYYY-MM-DD"/><Text style={styles.helper}>Leave the end date blank to use the next day when the end time is earlier than the start time.</Text></Section>
     <Section title="Venue & location"><Field label="Venue *" value={venue} onChangeText={setVenue} placeholder="Venue name"/><Field label="Address *" value={address} onChangeText={setAddress} placeholder="Street address"/><View style={styles.twoCol}><View style={styles.flex}><Field label="City *" value={city} onChangeText={setCity} placeholder="London"/></View><View style={styles.flex}><Field label="Postcode *" value={postcode} onChangeText={setPostcode} placeholder="SW1A 1AA"/></View></View></Section>
     <Section title="Cover image">{!!image&&<Image source={{uri:image}} style={styles.coverPreview} contentFit="cover"/>}<Pressable disabled={uploadingImage} style={styles.imageButton} onPress={() => void chooseImage()}>{uploadingImage?<ActivityIndicator color="#7c3aed"/>:<Text style={styles.imageButtonText}>{image?'Replace cover photo':'Choose cover photo from phone'}</Text>}</Pressable>{image?<Text style={styles.uploaded}>✓ Cover photo uploaded securely</Text>:<Text style={styles.helper}>JPG, PNG or WEBP, up to 10 MB.</Text>}</Section>
 
