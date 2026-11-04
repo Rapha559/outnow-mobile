@@ -4,11 +4,12 @@ The app code is prepared for iOS and Android production builds. Complete the ext
 
 ## Build and native services
 
-- Run `npm install` after pulling so the lockfile is refreshed with the current Expo SDK 57 dependencies, including `expo-dev-client`.
+- Run `npm ci` after pulling so the committed Expo SDK 58 dependency lockfile is used unchanged.
 - Run `npx expo-doctor`, `npx expo lint`, and `npx tsc --noEmit`.
 - Run `eas init` once for this Expo project if it has not been linked yet. This supplies the EAS project ID used by Expo push tokens.
 - Create a development build with `eas build --profile development --platform ios` or `--platform android` and test push notifications on a physical device.
 - Create store builds with `eas build --profile production --platform ios` and `eas build --profile production --platform android` only after the checks below pass.
+- Production builds use the `production` EAS Update channel and an app-version runtime. Increment the app version before any release that changes native code or native dependencies, so over-the-air updates are only delivered to compatible builds.
 
 ## Apple
 
