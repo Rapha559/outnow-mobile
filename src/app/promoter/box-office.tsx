@@ -12,7 +12,7 @@ import { apiRequest } from '@/lib/api';
 type TicketType = { id: string; name: string; price: number; remaining: number; maxPerOrder: number; active: boolean };
 type BoxOfficeData = {
   success: true;
-  event: { id: string; title: string; date: string; venue: string };
+  event: { id: string; title: string; date: string; venue: string; salesOpen: boolean; salesClosedReason: string | null };
   permissions: string[];
   isPromoter: boolean;
   reporting: { count: number; total: number }[];
@@ -182,6 +182,7 @@ function BoxOfficeContent({ eventId, security }: { eventId: string; security: Me
 
   async function submit() {
     if (!sessionToken || !lines.length) return setError('Choose at least one ticket.');
+    if (!data?.event.salesOpen) return setError(data?.event.salesClosedReason || 'Box Office sales have closed for this event.');
     if (method === 'COMPLIMENTARY' && !data?.permissions.includes('ISSUE_COMPLIMENTARY')) return setError('You do not have complimentary-ticket permission.');
     if (method === 'COMPLIMENTARY') {
       const confirmed = await new Promise<boolean>((resolve) => Alert.alert(
@@ -360,6 +361,7 @@ function BoxOfficeContent({ eventId, security }: { eventId: string; security: Me
             </View>
           )}
 
+          {data?.event.salesOpen ? <>
           <Text style={styles.section}>Tickets</Text>
           {data?.ticketTypes.map((ticket) => (
             <View key={ticket.id} style={styles.ticket}>
@@ -413,6 +415,10 @@ function BoxOfficeContent({ eventId, security }: { eventId: string; security: Me
             )}
           </Pressable>
           <Text style={styles.notice}>Tap to Pay requires a development or production build; Expo Go cannot use Stripe Terminal.</Text>
+          </> : data ? <View style={styles.closedSalesCard}>
+            <Text style={styles.closedSalesTitle}>Door sales closed</Text>
+            <Text style={styles.closedSalesCopy}>{data?.event.salesClosedReason || 'Door sales are not available for this event.'} Reporting, check-in history, and approved refunds or reconciliation remain available.</Text>
+          </View> : null}
         </ScrollView>
       </SafeAreaView>
 
@@ -478,6 +484,9 @@ const styles = StyleSheet.create({
   securityButton: { alignSelf: 'flex-start', borderRadius: 10, borderWidth: 1, borderColor: '#a78bfa', paddingHorizontal: 11, paddingVertical: 8, marginTop: 10 },
   securityButtonText: { color: '#6d28d9', fontSize: 11, fontWeight: '900' },
   securityNotice: { color: '#6d28d9', fontSize: 10, lineHeight: 15, marginTop: 9 },
+  closedSalesCard: { borderRadius: 16, borderWidth: 1, borderColor: '#bfdbfe', backgroundColor: '#eff6ff', padding: 14, marginTop: 18 },
+  closedSalesTitle: { color: '#1d4ed8', fontSize: 15, fontWeight: '900' },
+  closedSalesCopy: { color: '#1e3a8a', fontSize: 11, lineHeight: 17, marginTop: 5 },
   section: { fontSize: 15, fontWeight: '900', color: '#111827', marginTop: 22, marginBottom: 8 },
   ticket: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16, padding: 13, flexDirection: 'row', alignItems: 'center', marginTop: 8 },
   ticketName: { fontWeight: '900', color: '#111827' },
