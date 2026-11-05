@@ -23,6 +23,9 @@ type InstantPayoutStatus={
   pendingPence:number;
   instantSupported:boolean;
   canInstantPayout:boolean;
+  instantPayoutHoldUntil:string|null;
+  instantPayoutHoldReason:'EVENT_HOLD'|'REFUND_PENDING'|null;
+  instantPayoutHoldMessage:string|null;
   destination:{type:'bank_account'|'card';last4:string|null;bankName:string|null}|null;
 };
 type InstantPayoutResult={success:true;payoutId:string;amountPence:number;status:string;arrivalDate:number|null};
@@ -160,9 +163,10 @@ export default function PromoterPayoutsScreen(){
           {!instant.instantSupported&&<Text style={styles.instantNotice}>Stripe does not currently offer Instant Payouts for this connected payout account.</Text>}
           {instant.instantSupported&&instant.availablePence<=0&&instant.pendingPence>0&&<Text style={styles.instantNotice}>Your money is still pending at Stripe. Instant payout will unlock when Stripe makes the balance available.</Text>}
           {instant.instantSupported&&instant.availablePence<=0&&instant.pendingPence<=0&&<Text style={styles.instantNotice}>There is no available connected-account balance to pay out right now.</Text>}
+          {!!instant.instantPayoutHoldMessage&&<Text style={styles.instantNotice}>{instant.instantPayoutHoldMessage}{instant.instantPayoutHoldUntil?` Eligible after ${dateTime(instant.instantPayoutHoldUntil)}.`:''}</Text>}
           {!!instantError&&<Text style={styles.instantError}>{instantError}</Text>}
           <Pressable disabled={!instant.canInstantPayout||instantSubmitting} style={[styles.instantButton,(!instant.canInstantPayout||instantSubmitting)&&styles.instantButtonDisabled]} onPress={confirmInstantPayout}>{instantSubmitting?<ActivityIndicator color="#fff"/>:<Text style={styles.instantButtonText}>{instant.availablePence>0?`Instant payout ${moneyFromPence(instant.availablePence)}`:'Instant payout'}</Text>}</Pressable>
-          <Text style={styles.instantFootnote}>Stripe eligibility and fees apply. Only funds Stripe marks as available can be paid out instantly.</Text>
+          <Text style={styles.instantFootnote}>Stripe eligibility and fees apply. Event proceeds remain held until 12 hours after the event ends.</Text>
         </>:<Text style={styles.instantNotice}>{instantError||'Instant payout status is unavailable.'}</Text>}
       </View>}
 
