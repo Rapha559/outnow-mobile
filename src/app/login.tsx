@@ -15,7 +15,7 @@ type StaffAccessResponse={success:true;hasScannerAccess:boolean;assignments:Arra
 
 function isSafeCustomerRedirect(value?:string){
   if(!value||!value.startsWith('/'))return false;
-  return value.startsWith('/event/')||value.startsWith('/tickets/transfer/accept');
+  return value.startsWith('/event/')||value.startsWith('/tickets/transfer/accept')||/^\/ticket\/[A-Za-z0-9_-]+$/.test(value);
 }
 
 export default function LoginScreen(){
