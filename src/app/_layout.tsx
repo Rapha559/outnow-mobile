@@ -101,7 +101,7 @@ export default function RootLayout(){
   return <AppErrorBoundary><AuthProvider>
     <NotificationObserver/><StatusBar style={showLaunchIntro?'light':theme.dark?'light':'dark'}/>
     <Stack key={theme.dark?'dark':'light'} screenOptions={{headerShown:false,contentStyle:{backgroundColor:theme.background}}}>
-      <Stack.Screen name="(tabs)"/><Stack.Screen name="event/[id]"/><Stack.Screen name="organiser/[id]"/><Stack.Screen name="ticket/[id]"/>
+      <Stack.Screen name="(tabs)"/><Stack.Screen name="event/[id]"/><Stack.Screen name="events/[id]/review"/><Stack.Screen name="organiser/[id]"/><Stack.Screen name="ticket/[id]"/>
       <Stack.Screen name="notifications"/><Stack.Screen name="tickets/transfer/accept"/>
       <Stack.Screen name="customer/orders"/><Stack.Screen name="customer/activity"/><Stack.Screen name="customer/checkout-result"/><Stack.Screen name="customer/reminders"/>
       <Stack.Screen name="login"/><Stack.Screen name="signup"/><Stack.Screen name="verify"/><Stack.Screen name="settings"/><Stack.Screen name="staff"/>
