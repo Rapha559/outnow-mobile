@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/auth-context';
 import { apiRequest } from '@/lib/api';
+import { PromoterIdentityCard } from '@/components/promoter-identity-card';
 
 type PayoutResponse={
   success:true;
@@ -150,6 +151,8 @@ export default function PromoterPayoutsScreen(){
       {!stripe?.payoutsEnabled&&<Pressable disabled={connecting} style={styles.primary} onPress={()=>void connectStripe()}>{connecting?<ActivityIndicator color="#fff"/>:<Text style={styles.primaryText}>{stripe?.connected?'Continue Stripe setup':'Connect Stripe'}</Text>}</Pressable>}
       {!!stripe?.connected&&<Pressable disabled={connecting} style={styles.secondary} onPress={()=>void openStripeDashboard()}><Text style={styles.secondaryText}>Open Stripe dashboard</Text></Pressable>}
       <Pressable style={styles.secondary} onPress={()=>void load(true)}><Text style={styles.secondaryText}>Refresh Stripe status</Text></Pressable>
+
+      <PromoterIdentityCard />
 
       {payoutState&&<View style={styles.statusCard}><Text style={styles.statusLabel}>CURRENT PAYOUT STATUS</Text><Text style={styles.statusTitle}>{payoutState.title}</Text><Text style={styles.statusCopy}>{payoutState.copy}</Text>{nextExpected&&<Text style={styles.nextCheck}>Next expected payout check: {dateTime(nextExpected)}</Text>}</View>}
 
