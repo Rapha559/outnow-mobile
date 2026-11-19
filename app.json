@@ -82,7 +82,7 @@
       [
         "@stripe/stripe-terminal-react-native",
         {
-          "bluetoothBackgroundMode": true,
+          "bluetoothBackgroundMode": false,
           "tapToPayCheck": true,
           "appDelegate": true,
           "locationWhenInUsePermission": "OutNow Tickets needs your location to securely process in-person payments with Stripe Terminal.",
