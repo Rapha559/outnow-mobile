@@ -7,6 +7,12 @@ import { apiRequest } from '@/lib/api';
 
 type IdentityStatus = { success: true; identity: { status: string; verified: boolean; required: boolean; updatedAt: string | null } };
 type IdentityStart = { success: true; status: string; url: string | null };
+type DocumentType = 'passport' | 'driving_license' | 'id_card';
+const documents: Array<{type:DocumentType; label:string; description:string}> = [
+  {type:'passport',label:'Passport',description:'Photograph your photo and details page'},
+  {type:'driving_license',label:'Driving licence',description:'Front and back if requested by Stripe'},
+  {type:'id_card',label:'National identity card',description:'Front and back if requested by Stripe'},
+];
 
 export function PromoterIdentityCard() {
   const { sessionToken, user } = useAuth();
@@ -14,6 +20,7 @@ export function PromoterIdentityCard() {
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState('');
+  const [selectedDocument, setSelectedDocument] = useState<DocumentType | null>(null);
 
   const refresh = useCallback(async () => {
     if (!sessionToken || user?.role !== 'PROMOTER') return;
@@ -37,13 +44,13 @@ export function PromoterIdentityCard() {
   }, [refresh]);
 
   async function begin() {
-    if (!sessionToken) return;
+    if (!sessionToken || !selectedDocument) return;
     try {
       setWorking(true);
       setError('');
       const result = await apiRequest<IdentityStart>(
         '/api/mobile/promoter/identity',
-        { method: 'POST' },
+        { method: 'POST', body: JSON.stringify({ documentType: selectedDocument }) },
         sessionToken,
       );
       if (result.url) await WebBrowser.openBrowserAsync(result.url);
@@ -73,9 +80,28 @@ export function PromoterIdentityCard() {
       {loading ? <ActivityIndicator color="#7c3aed" /> : (
         <View style={styles.actions}>
           {status !== 'VERIFIED' && status !== 'PROCESSING' && (
-            <Pressable disabled={working} style={styles.button} onPress={() => void begin()}>
-              {working ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Continue verification</Text>}
-            </Pressable>
+            <>
+              <Text style={styles.choiceLabel}>Choose your ID document</Text>
+              {documents.map(item => (
+                <Pressable
+                  key={item.type}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: selectedDocument === item.type }}
+                  disabled={working}
+                  style={[styles.documentOption, selectedDocument === item.type && styles.documentSelected]}
+                  onPress={() => setSelectedDocument(item.type)}
+                >
+                  <Text style={styles.radioIndicator}>{selectedDocument === item.type ? '◉' : '◯'}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.documentName}>{item.label}</Text>
+                    <Text style={styles.documentDescription}>{item.description}</Text>
+                  </View>
+                </Pressable>
+              ))}
+              <Pressable disabled={working || !selectedDocument} style={[styles.button, !selectedDocument && styles.buttonDisabled]} onPress={() => void begin()}>
+                {working ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Continue to Stripe verification</Text>}
+              </Pressable>
+            </>
           )}
           <Pressable disabled={working} style={styles.secondary} onPress={() => void refresh()}>
             <Text style={styles.secondaryText}>Refresh status</Text>
@@ -98,4 +124,11 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontWeight: '900', fontSize: 13 },
   secondary: { minHeight: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 1, borderColor: '#c4b5fd' },
   secondaryText: { color: '#6d28d9', fontWeight: '800', fontSize: 12 },
+  choiceLabel: { color: '#312e81', fontSize: 13, fontWeight: '900' },
+  documentOption: { padding: 12, minHeight: 62, borderRadius: 12, flexDirection: 'row', gap: 10, alignItems: 'center', backgroundColor: '#fff', borderColor: '#ddd6fe', borderWidth: 1 },
+  documentSelected: { borderColor: '#7c3aed', backgroundColor: '#f3e8ff' },
+  radioIndicator: { fontSize: 22, color: '#7c3aed' },
+  documentName: { fontSize: 13, color: '#111827', fontWeight: '800' },
+  documentDescription: { fontSize: 11, marginTop: 3, color: '#6b7280' },
+  buttonDisabled: { opacity: 0.5 },
 });
