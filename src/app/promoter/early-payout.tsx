@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { File as ExpoFile } from 'expo-file-system';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet,
@@ -7,11 +8,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/auth-context';
-import { apiRequest } from '@/lib/api';
+import { API_BASE, apiRequest } from '@/lib/api';
 
 type EventOption = { id: string; title: string; venue: string; date: string };
 type Check = { key: string; label: string; done: boolean; status: string; note: string | null };
+type DocumentMeta = { id: string; category: string; filename: string; sizeBytes: number };
+const EVIDENCE_TYPES = [
+  { category: 'VENUE_BOOKING', label: 'Venue booking agreement or receipt' },
+  { category: 'PERFORMER_CONTRACTS', label: 'Performer / organiser contract' },
+  { category: 'BUSINESS_DETAILS', label: 'Business verification document' },
+] as const;
+type EvidenceCategory = typeof EVIDENCE_TYPES[number]['category'];
 type Application = {
+  documents: DocumentMeta[];
   id: string; eventId: string; eventTitle: string; amount: number; purpose: string;
   status: string; createdAt: string; reviewNotes: string | null;
   checks: Check[]; checksComplete: boolean;
@@ -40,9 +49,8 @@ export default function PromoterEarlyPayoutScreen() {
   const [eventChooserOpen, setEventChooserOpen] = useState(false);
   const [amount, setAmount] = useState('');
   const [purpose, setPurpose] = useState('');
-  const [venueEvidence, setVenueEvidence] = useState('');
-  const [performerEvidence, setPerformerEvidence] = useState('');
-  const [businessEvidence, setBusinessEvidence] = useState('');
+  const [evidence, setEvidence] = useState<Partial<Record<EvidenceCategory, { uri: string; name: string; mimeType: string; size: number }>>>({});
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [accepted, setAccepted] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -80,8 +88,59 @@ export default function PromoterEarlyPayoutScreen() {
     Number(amount) > 0 && Number(amount) <= 100000;
   const canSubmit = !!sessionToken && !!eventId && validAmount &&
     purpose.trim().length >= 15 && purpose.trim().length <= 1000 &&
-    [venueEvidence, performerEvidence, businessEvidence].every(v => v.trim().length <= 1000) &&
+    EVIDENCE_TYPES.every(kind => !!evidence[kind.category]) &&
     accepted && !saving;
+
+  async function chooseDocument(category: EvidenceCategory) {
+    try {
+      const picked = await ExpoFile.pickFileAsync({ mimeTypes: ['application/pdf', 'image/jpeg', 'image/png'] });
+      if (picked.canceled || picked.result.length === 0) return;
+      const file = picked.result[0];
+      const extension = file.name.toLowerCase().split('.').pop();
+      if (!['pdf', 'jpg', 'jpeg', 'png'].includes(extension || '')) throw new Error('Choose a PDF, JPG or PNG document.');
+      if (file.size <= 0 || file.size > 4 * 1024 * 1024) throw new Error('Document must be 4 MB or smaller.');
+      const mimeType = extension === 'pdf' ? 'application/pdf' : extension === 'png' ? 'image/png' : 'image/jpeg';
+      setEvidence(previous => ({ ...previous, [category]: { uri: file.uri, name: file.name, mimeType, size: file.size } }));
+      setError('');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Unable to choose document.');
+    }
+  }
+
+  async function uploadDocument(applicationId: string, category: EvidenceCategory, selectedFile: { uri: string; name: string; mimeType: string }) {
+    if (!sessionToken) throw new Error('Session expired.');
+    const form = new FormData();
+    form.append('applicationId', applicationId);
+    form.append('category', category);
+    // React Native supports a file URI for multipart uploads.
+    form.append('file', { uri: selectedFile.uri, name: selectedFile.name, type: selectedFile.mimeType } as unknown as Blob);
+    const response = await fetch(API_BASE + '/api/mobile/promoter/early-payout/documents', {
+      method: 'POST',
+      headers: { authorization: 'Bearer ' + sessionToken, accept: 'application/json' },
+      body: form,
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(data?.error || 'Document upload failed.');
+  }
+
+  async function replaceDocument(applicationId: string, category: EvidenceCategory) {
+    try {
+      const picked = await ExpoFile.pickFileAsync({ mimeTypes: ['application/pdf', 'image/jpeg', 'image/png'] });
+      if (picked.canceled || picked.result.length === 0) return;
+      const file = picked.result[0];
+      const ext = file.name.toLowerCase().split('.').pop();
+      if (!['pdf', 'jpg', 'jpeg', 'png'].includes(ext || '') || file.size <= 0 || file.size > 4 * 1024 * 1024) {
+        throw new Error('Choose a PDF, JPG or PNG document of at most 4 MB.');
+      }
+      const mimeType = ext === 'pdf' ? 'application/pdf' : ext === 'png' ? 'image/png' : 'image/jpeg';
+      setUploadingKey(applicationId + category); setError('');
+      await uploadDocument(applicationId, category, { uri: file.uri, name: file.name, mimeType });
+      setMessage('Document uploaded. Admin verification is pending.');
+      await load(true);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Unable to replace document.');
+    } finally { setUploadingKey(null); }
+  }
 
   async function submit() {
     if (!sessionToken || !canSubmit) return;
@@ -101,25 +160,37 @@ export default function PromoterEarlyPayoutScreen() {
       setSaving(true);
       setError('');
       setMessage('');
-      const result = await apiRequest<{ success: true; message: string }>(
+      const result = await apiRequest<{ success: true; id: string; message: string }>(
         '/api/mobile/promoter/early-payout',
         {
           method: 'POST',
           body: JSON.stringify({
             eventId, amount: Number(amount), purpose: purpose.trim(),
-            venueEvidence: venueEvidence.trim(), performerEvidence: performerEvidence.trim(),
-            businessEvidence: businessEvidence.trim(), acceptAgreement: accepted,
+            acceptAgreement: accepted,
           }),
         },
         sessionToken,
       );
-      setMessage(result.message || 'Application submitted for review.');
+      const failures: string[] = [];
+      for (const kind of EVIDENCE_TYPES) {
+        const file = evidence[kind.category];
+        if (!file) continue;
+        try {
+          setUploadingKey(kind.category);
+          await uploadDocument(result.id, kind.category, file);
+        } catch (reason) {
+          failures.push(kind.label + ': ' + (reason instanceof Error ? reason.message : 'Upload failed'));
+        }
+      }
+      if (failures.length) {
+        setError('Application created, but some documents failed to upload. Retry them in Your applications: ' + failures.join('; '));
+      } else {
+        setMessage('Application and all three documents submitted for admin review.');
+      }
+      setEvidence({});
       setEventId('');
       setAmount('');
       setPurpose('');
-      setVenueEvidence('');
-      setPerformerEvidence('');
-      setBusinessEvidence('');
       setAccepted(false);
       await load(true);
     } catch (reason) {
@@ -196,22 +267,16 @@ export default function PromoterEarlyPayoutScreen() {
                 placeholder="Describe how funds would support this event (at least 15 characters)"
                 placeholderTextColor="#9ca3af" value={purpose} onChangeText={setPurpose} maxLength={1000} />
 
-              <Text style={styles.help}>Provide references or secure document locations for admin review. Do not enter ID numbers, passwords or bank details.</Text>
-              <Text style={styles.label}>Venue booking evidence/reference</Text>
-              <TextInput style={[styles.input, styles.multiline]} multiline textAlignVertical="top"
-                placeholder="Booking reference, contact or signed agreement location"
-                placeholderTextColor="#9ca3af" value={venueEvidence} onChangeText={setVenueEvidence} maxLength={1000} />
-
-              <Text style={styles.label}>Performer / organiser contracts reference</Text>
-              <TextInput style={[styles.input, styles.multiline]} multiline textAlignVertical="top"
-                placeholder="Contract reference or secure location"
-                placeholderTextColor="#9ca3af" value={performerEvidence} onChangeText={setPerformerEvidence} maxLength={1000} />
-
-              <Text style={styles.label}>Business details evidence/reference</Text>
-              <TextInput style={[styles.input, styles.multiline]} multiline textAlignVertical="top"
-                placeholder="Business registration or relevant reference"
-                placeholderTextColor="#9ca3af" value={businessEvidence} onChangeText={setBusinessEvidence} maxLength={1000} />
-
+              <Text style={styles.help}>Upload each supporting document (PDF, JPG or PNG, max 4 MB). Only authorised OutNow admins may download them. Do not upload IDs or selfies here — use Stripe Identity.</Text>
+              {EVIDENCE_TYPES.map(kind => (
+                <View key={kind.category}>
+                  <Text style={styles.label}>{kind.label} *</Text>
+                  <Pressable accessibilityRole="button" style={styles.fileButton}
+                    onPress={() => void chooseDocument(kind.category)}>
+                    <Text style={styles.fileButtonText}>{evidence[kind.category]?.name || 'Choose PDF / JPG / PNG'}</Text>
+                  </Pressable>
+                </View>
+              ))}
               <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: accepted }}
                 style={styles.agreement} onPress={() => setAccepted(!accepted)}>
                 <Text style={styles.checkbox}>{accepted ? '☑' : '☐'}</Text>
@@ -249,6 +314,19 @@ export default function PromoterEarlyPayoutScreen() {
                           </View>
                         </View>
                       ))}
+                      <Text style={styles.cardTitle}>Evidence documents</Text>
+                      {EVIDENCE_TYPES.map(kind => {
+                        const doc = app.documents?.find(d => d.category === kind.category);
+                        return <View key={kind.category} style={styles.evidenceRow}>
+                          <Text style={styles.checkName}>{kind.label}</Text>
+                          <Text style={[styles.muted, doc && styles.uploaded]}>{doc ? doc.filename : 'Not uploaded'}</Text>
+                          {['SUBMITTED', 'IN_REVIEW'].includes(app.status) &&
+                            <Pressable disabled={!!uploadingKey} style={styles.fileButton}
+                              onPress={() => void replaceDocument(app.id, kind.category)}>
+                              <Text style={styles.fileButtonText}>{uploadingKey === app.id + kind.category ? 'Uploading…' : doc ? 'Replace document' : 'Upload document'}</Text>
+                            </Pressable>}
+                        </View>;
+                      })}
                       {!!app.reviewNotes && <Text style={styles.reviewNote}>Admin response: {app.reviewNotes}</Text>}
                     </>}
                   </View>;
@@ -284,6 +362,10 @@ const styles = StyleSheet.create({
   eventItem: { padding: 14, borderBottomColor: '#e5e0f3', borderBottomWidth: 1 },
   eventName: { color: '#111827', fontWeight: '800', fontSize: 14 },
   help: { color: '#6b7280', fontSize: 11, lineHeight: 17, marginTop: 9 },
+  fileButton: { borderWidth: 1, borderColor: '#a78bfa', borderRadius: 11, backgroundColor: '#f5f3ff', padding: 14, marginTop: 6 },
+  fileButtonText: { color: '#6d28d9', fontSize: 12, fontWeight: '800' },
+  evidenceRow: { paddingVertical: 8, gap: 4 },
+  uploaded: { color: '#15803d' },
   muted: { color: '#6b7280', fontSize: 12, lineHeight: 18 },
   agreement: { flexDirection: 'row', gap: 12, paddingVertical: 14, alignItems: 'flex-start' },
   checkbox: { color: '#7c3aed', fontSize: 24, marginTop: -3 },
