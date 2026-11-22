@@ -94,8 +94,8 @@ export default function PromoterEarlyPayoutScreen() {
   async function chooseDocument(category: EvidenceCategory) {
     try {
       const picked = await ExpoFile.pickFileAsync({ mimeTypes: ['application/pdf', 'image/jpeg', 'image/png'] });
-      if (picked.canceled || picked.result.length === 0) return;
-      const file = picked.result[0];
+      if (picked.canceled) return;
+      const file = picked.result;
       const extension = file.name.toLowerCase().split('.').pop();
       if (!['pdf', 'jpg', 'jpeg', 'png'].includes(extension || '')) throw new Error('Choose a PDF, JPG or PNG document.');
       if (file.size <= 0 || file.size > 4 * 1024 * 1024) throw new Error('Document must be 4 MB or smaller.');
@@ -126,8 +126,8 @@ export default function PromoterEarlyPayoutScreen() {
   async function replaceDocument(applicationId: string, category: EvidenceCategory) {
     try {
       const picked = await ExpoFile.pickFileAsync({ mimeTypes: ['application/pdf', 'image/jpeg', 'image/png'] });
-      if (picked.canceled || picked.result.length === 0) return;
-      const file = picked.result[0];
+      if (picked.canceled) return;
+      const file = picked.result;
       const ext = file.name.toLowerCase().split('.').pop();
       if (!['pdf', 'jpg', 'jpeg', 'png'].includes(ext || '') || file.size <= 0 || file.size > 4 * 1024 * 1024) {
         throw new Error('Choose a PDF, JPG or PNG document of at most 4 MB.');
