@@ -4,6 +4,7 @@ import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, Text
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getUserLocation } from '@/lib/user-location';
+import { useDisplayCurrency } from '@/lib/display-currency';
 
 const API_BASE = 'https://www.outnowtickets.com';
 
@@ -79,6 +80,7 @@ function inDateWindow(event: EventItem, filter: DateFilter) {
 }
 
 export default function ExploreScreen() {
+  const {money,currency,setCurrency,approximate}=useDisplayCurrency();
   const [events, setEvents] = useState<EventItem[]>([]);
   const [query, setQuery] = useState('');
   const [locationQuery, setLocationQuery] = useState('');
@@ -185,7 +187,7 @@ export default function ExploreScreen() {
                       <Text style={styles.featuredCategory}>{event.category}</Text>
                       <Text style={styles.featuredTitle} numberOfLines={2}>{event.title}</Text>
                       <Text style={styles.featuredMeta}>{event.date}</Text>
-                      <Text style={styles.featuredPrice}>From £{event.price}</Text>
+                      <Text style={styles.featuredPrice}>From {money(Number(event.price))}</Text>
                     </View>
                   </Pressable>
                 ))}
@@ -204,7 +206,15 @@ export default function ExploreScreen() {
             {([['ANY','Any date'],['TODAY','Today'],['WEEKEND','This weekend'],['7_DAYS','Next 7 days'],['30_DAYS','Next 30 days']] as Array<[DateFilter,string]>).map(([value,label]) => <Pressable key={value} style={[styles.chip, dateFilter === value && styles.chipSelected]} onPress={() => setDateFilter(value)}><Text style={[styles.chipText, dateFilter === value && styles.chipTextSelected]}>{label}</Text></Pressable>)}
           </ScrollView>
 
-          <View style={styles.sortRow}>
+          <View style={{flexDirection:'row',alignItems:'center',gap:9,marginVertical:10}}>
+        <Text style={{color:'#6b7280',fontSize:12}}>Currency</Text>
+        {(['GBP','NGN'] as const).map(value=><Pressable key={value} onPress={()=>setCurrency(value)}
+          style={{borderRadius:9,paddingHorizontal:12,paddingVertical:8,backgroundColor:currency===value?'#ede9fe':'#f3f4f6'}}>
+          <Text style={{color:'#6d28d9',fontWeight:'800'}}>{value==='GBP'?'£ GBP':'₦ NGN'}</Text>
+        </Pressable>)}
+        {currency==='NGN'&&<Text style={{color:'#6b7280',fontSize:10,flex:1}}>{approximate?'Approx. · pay GBP':'Rate unavailable'}</Text>}
+      </View>
+      <View style={styles.sortRow}>
             <Text style={styles.filterLabel}>Sort</Text>
             {activeFilters && <Pressable onPress={clearFilters}><Text style={styles.clearText}>Clear filters</Text></Pressable>}
           </View>
@@ -235,7 +245,7 @@ export default function ExploreScreen() {
                       <Text style={styles.meta} numberOfLines={1}>{event.date}</Text>
                       <Text style={styles.meta} numberOfLines={1}>{event.venue || event.location}</Text>
                     </View>
-                    <Text style={styles.price}>£{event.price}</Text>
+                    <Text style={styles.price}>{money(Number(event.price))}</Text>
                   </Pressable>
                 );
               })}
