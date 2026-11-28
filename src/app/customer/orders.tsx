@@ -22,7 +22,7 @@ type Refund={
   lifecycle:RefundLifecycle; failureReason:string|null; transactionId:string|null; processedAt:string|null; canCancel:boolean;
 };
 type Order={
-  id:string;orderNumber:string;status:string;createdAt:string;customerName:string;customerEmail:string;
+  id:string;orderNumber:string;status:string;createdAt:string;customerName:string;customerEmail:string;currency:'GBP'|'NGN';
   subtotal:number;discount:number;bookingFee:number;total:number;paymentStatus:string|null;paymentMethod:string|null;
   event:{id:string;title:string;date:string;endDate:string|null;venue:string;location:string;image:string|null;status:string};
   items:Array<{id:string;ticketTypeId:string;name:string;quantity:number;unitPrice:number;totalPrice:number}>;
@@ -31,7 +31,9 @@ type Order={
 };
 type Response={success:true;orders:Order[]};
 
-function money(value:number){return `£${value.toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})}`;}
+function money(value:number,currency:'GBP'|'NGN'='GBP'){
+  return new Intl.NumberFormat(currency==='NGN'?'en-NG':'en-GB',{style:'currency',currency}).format(value);
+}
 function imageUrl(value:string|null){if(!value)return `${API_BASE}/images/event-placeholder.jpg`;return /^https?:\/\//i.test(value)?value:`${API_BASE}${value.startsWith('/')?value:`/${value}`}`;}
 function dateLabel(value:string){const d=new Date(value);return Number.isNaN(d.getTime())?value:new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(d);}
 function refundTone(key:string){if(key==='REFUNDED')return styles.refundDone;if(key==='DECLINED'||key==='FAILED'||key==='CANCELLED')return styles.refundBad;if(key==='PROCESSING')return styles.refundProcessing;return styles.refundPending;}
@@ -72,7 +74,8 @@ export default function CustomerOrdersScreen(){
     });
   },[orders,query,filter]);
 
-  const paidSpend=useMemo(()=>orders.filter(o=>['PAID','PARTIALLY_REFUNDED','REFUNDED'].includes(o.status)).reduce((s,o)=>s+o.total,0),[orders]);
+  const gbpSpend=useMemo(()=>orders.filter(o=>o.currency==='GBP'&&['PAID','PARTIALLY_REFUNDED','REFUNDED'].includes(o.status)).reduce((s,o)=>s+o.total,0),[orders]);
+  const ngnSpend=useMemo(()=>orders.filter(o=>o.currency==='NGN'&&['PAID','PARTIALLY_REFUNDED','REFUNDED'].includes(o.status)).reduce((s,o)=>s+o.total,0),[orders]);
 
   function openRefund(order:Order){
     setMessage('');setError('');setRefundOrderId(order.id);setRefundAmount(order.refund.remainingRefundable.toFixed(2));setRefundReason('');
@@ -82,10 +85,10 @@ export default function CustomerOrdersScreen(){
     if(!sessionToken)return;
     const amount=Number(refundAmount);
     if(!Number.isFinite(amount)||amount<=0){setError('Enter a valid refund amount.');return;}
-    if(amount>order.refund.remainingRefundable){setError(`Maximum refundable amount is ${money(order.refund.remainingRefundable)}.`);return;}
+    if(amount>order.refund.remainingRefundable){setError(`Maximum refundable amount is ${money(order.refund.remainingRefundable,order.currency)}.`);return;}
     try{
       setSubmitting(true);setError('');setMessage('');
-      await apiRequest('/api/mobile/refunds',{method:'POST',body:JSON.stringify({orderId:order.id,amount,reason:refundReason})},sessionToken);
+      await apiRequest('/api/mobile/refunds',{method:'POST',body:JSON.stringify({orderId:order.id,...(order.currency==='NGN'?{refundAll:true}:{amount}),reason:refundReason})},sessionToken);
       setRefundOrderId(null);setRefundAmount('');setRefundReason('');
       setMessage('Refund request submitted. You can track every update below.');
       await load(true);
@@ -110,7 +113,7 @@ export default function CustomerOrdersScreen(){
     <View style={styles.top}><Pressable style={styles.circle} onPress={()=>router.back()}><Text style={styles.back}>‹</Text></Pressable><Text style={styles.topTitle}>Orders & refunds</Text><Pressable style={styles.circle} onPress={()=>void load(true)}><Text style={styles.refresh}>↻</Text></Pressable></View>
     <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={()=>void load(true)} colors={['#7c3aed']} tintColor="#7c3aed"/>}>
       <Text style={styles.eyebrow}>YOUR OUTNOW</Text><Text style={styles.title}>Orders & refunds</Text><Text style={styles.copy}>Track purchases, request eligible refunds and follow progress from review to completion.</Text>
-      <View style={styles.summary}><Metric label="Orders" value={String(orders.length)}/><Metric label="Total purchased" value={money(paidSpend)}/></View>
+      <View style={styles.summary}><Metric label="Orders" value={String(orders.length)}/><Metric label="GBP purchases" value={money(gbpSpend)}/>{orders.some(o=>o.currency==="NGN")&&<Metric label="NGN purchases" value={money(ngnSpend,"NGN")}/>}</View>
       {!!message&&<View style={styles.successBox}><Text style={styles.successText}>{message}</Text></View>}
       {!!error&&<View style={styles.errorBox}><Text style={styles.error}>{error}</Text></View>}
       <TextInput value={query} onChangeText={setQuery} placeholder="Search orders or events" placeholderTextColor="#9ca3af" style={styles.search}/>
@@ -120,15 +123,15 @@ export default function CustomerOrdersScreen(){
         {filtered.map(order=><View key={order.id} style={styles.card}>
           <Image source={{uri:imageUrl(order.event.image)}} style={styles.image} contentFit="cover"/>
           <View style={styles.body}>
-            <View style={styles.row}><View style={{flex:1}}><Text style={styles.orderNo}>{order.orderNumber}</Text><Text style={styles.eventTitle}>{order.event.title}</Text></View><Text style={styles.amount}>{money(order.total)}</Text></View>
+            <View style={styles.row}><View style={{flex:1}}><Text style={styles.orderNo}>{order.orderNumber}</Text><Text style={styles.eventTitle}>{order.event.title}</Text></View><Text style={styles.amount}>{money(order.total,order.currency)}</Text></View>
             <Text style={styles.meta}>{dateLabel(order.createdAt)} · {order.ticketCount} ticket{order.ticketCount===1?'':'s'}</Text><Text style={styles.meta}>{order.event.venue}</Text>
-            <View style={styles.items}>{order.items.map(item=><View key={item.id} style={styles.itemRow}><Text style={styles.item}>{item.quantity}× {item.name}</Text><Text style={styles.item}>{money(item.totalPrice)}</Text></View>)}</View>
+            <View style={styles.items}>{order.items.map(item=><View key={item.id} style={styles.itemRow}><Text style={styles.item}>{item.quantity}× {item.name}</Text><Text style={styles.item}>{money(item.totalPrice,order.currency)}</Text></View>)}</View>
             <View style={styles.footer}><View style={[styles.pill,['PAID','PARTIALLY_REFUNDED'].includes(order.status)&&styles.paid]}><Text style={[styles.pillText,['PAID','PARTIALLY_REFUNDED'].includes(order.status)&&styles.paidText]}>{order.status.replace(/_/g,' ')}</Text></View><Text style={styles.policy}>{order.refund.policyLabel}</Text></View>
 
             {order.refunds.length>0&&<View style={styles.refundSection}>
               <Text style={styles.refundHeading}>Refund timeline</Text>
               {order.refunds.map(refund=><View key={refund.id} style={styles.refundCard}>
-                <View style={styles.refundTop}><View style={[styles.refundDot,refundTone(refund.lifecycle.key)]}/><View style={{flex:1}}><Text style={styles.refundTitle}>{refund.lifecycle.label}</Text><Text style={styles.refundMeta}>{money(refund.amount)} · Requested {dateLabel(refund.createdAt)}</Text></View></View>
+                <View style={styles.refundTop}><View style={[styles.refundDot,refundTone(refund.lifecycle.key)]}/><View style={{flex:1}}><Text style={styles.refundTitle}>{refund.lifecycle.label}</Text><Text style={styles.refundMeta}>{money(refund.amount,order.currency)} · Requested {dateLabel(refund.createdAt)}</Text></View></View>
                 {!!refund.reason&&<Text style={styles.refundReason}>Reason: {refund.reason}</Text>}
                 {!!refund.failureReason&&<Text style={styles.failure}>{refund.failureReason}</Text>}
                 {refund.processedAt&&<Text style={styles.refundMeta}>Updated {dateLabel(refund.processedAt)}</Text>}
@@ -136,12 +139,14 @@ export default function CustomerOrdersScreen(){
               </View>)}
             </View>}
 
-            {order.refund.canRequest&&refundOrderId!==order.id&&<Pressable style={styles.refundButton} onPress={()=>openRefund(order)}><Text style={styles.refundButtonText}>Request refund · up to {money(order.refund.remainingRefundable)}</Text></Pressable>}
+            {order.refund.canRequest&&refundOrderId!==order.id&&<Pressable style={styles.refundButton} onPress={()=>openRefund(order)}><Text style={styles.refundButtonText}>Request refund · up to {money(order.refund.remainingRefundable,order.currency)}</Text></Pressable>}
             {!order.refund.canRequest&&order.refunds.length===0&&<Text style={styles.refundUnavailable}>{order.refund.message}</Text>}
 
             {refundOrderId===order.id&&<View style={styles.refundForm}>
               <Text style={styles.refundHeading}>Request a refund</Text><Text style={styles.formHelp}>{order.refund.message}</Text>
-              <Text style={styles.label}>Amount</Text><TextInput value={refundAmount} onChangeText={setRefundAmount} keyboardType="decimal-pad" style={styles.input} placeholder="0.00"/>
+              {order.currency==='NGN'
+                ?<Text style={styles.formHelp}>Request refund of the remaining amount: {money(order.refund.remainingRefundable,'NGN')}</Text>
+                :<><Text style={styles.label}>Amount</Text><TextInput value={refundAmount} onChangeText={setRefundAmount} keyboardType="decimal-pad" style={styles.input} placeholder="0.00"/></>}
               <Text style={styles.label}>Reason</Text><TextInput value={refundReason} onChangeText={setRefundReason} style={[styles.input,styles.textarea]} multiline placeholder="Tell us why you are requesting a refund"/>
               <View style={styles.formActions}><Pressable disabled={submitting} style={styles.formSecondary} onPress={()=>setRefundOrderId(null)}><Text style={styles.formSecondaryText}>Cancel</Text></Pressable><Pressable disabled={submitting} style={styles.formPrimary} onPress={()=>void submitRefund(order)}>{submitting?<ActivityIndicator color="#fff"/>:<Text style={styles.primaryText}>Submit request</Text>}</Pressable></View>
             </View>}
