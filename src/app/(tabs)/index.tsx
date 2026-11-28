@@ -17,7 +17,7 @@ function imageUrl(value?:string|null){const clean=String(value||'').trim();if(!c
 function shortDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?value:new Intl.DateTimeFormat('en-GB',{weekday:'short',day:'numeric',month:'short'}).format(date);}
 
 export default function HomeScreen(){
-  const {money,currency,setCurrency,approximate}=useDisplayCurrency();
+  const {money,currency,setCurrency}=useDisplayCurrency();
   const {sessionToken,isAuthenticated}=useAuth();
   const [events,setEvents]=useState<EventItem[]>([]);
   const [recommendations,setRecommendations]=useState<PersonalEvent[]>([]);
@@ -50,7 +50,7 @@ export default function HomeScreen(){
       style={{borderRadius:10,paddingHorizontal:12,paddingVertical:7,backgroundColor:currency===value?'#ede9fe':'#f3f4f6'}}>
       <Text style={{fontWeight:'800',color:'#6d28d9'}}>{value==='NGN'?'₦ NGN':'£ GBP'}</Text>
     </Pressable>)}
-  </View>{currency==='NGN'&&<Text style={{color:'#6b7280',fontSize:11,marginBottom:8}}>{approximate?'Estimated NGN prices · charged in GBP':'NGN rate unavailable · shown in GBP'}</Text>}
+  </View>
   <Text style={styles.heroTitle}>Your next great night starts here.</Text><Text style={styles.heroCopy}>Find concerts, nightlife, festivals and live experiences across the UK.</Text>{userLocation&&<View style={styles.locationBadge}><Text style={styles.locationBadgeIcon}>⌖</Text><Text style={styles.locationBadgeText}>{userLocation.label}</Text></View>}</View>
     <Pressable style={styles.searchWrap} onPress={()=>router.push('/explore')}><Text style={styles.searchIcon}>⌕</Text><TextInput value={query} onChangeText={setQuery} placeholder="Search events, venues or cities" placeholderTextColor="#9ca3af" style={styles.searchInput} autoCapitalize="none" returnKeyType="search"/></Pressable>
 
