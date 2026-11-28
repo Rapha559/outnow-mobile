@@ -106,14 +106,14 @@ export default function EventDetailsScreen(){
   // currency. Confirm the real charge in GBP before opening Stripe to prevent an
   // unexpected international card charge. This applies to both standard ticket
   // checkout and reserved waitlist ticket offers.
-  function confirmGbpCardCharge(amountGbp:number, onContinue:()=>void) {
-    if(currency!=='NGN'||amountGbp<=0){onContinue();return;}
+  function confirmGbpCardCharge(amountGbp:number|null, onContinue:()=>void) {
+    if(currency!=='NGN'||(amountGbp!==null&&amountGbp<=0)){onContinue();return;}
     Alert.alert(
       'Payment is charged in GBP',
-      `Your Nigerian naira price is an estimate, not the checkout currency. Stripe will charge £${amountGbp.toFixed(2)} GBP. Your card issuer may convert it to naira and charge exchange or international fees. Nigerian bank transfer and local Naira Card methods are not available in this checkout yet.`,
+      `Your Nigerian naira price is an estimate, not the checkout currency. Stripe will charge in GBP${amountGbp===null?' (the final total including fees will be shown before payment)':` (£${amountGbp.toFixed(2)})`}. Your card issuer may convert it to naira and charge exchange or international fees. Nigerian bank transfer and local Naira Card methods are not available in this checkout yet.`,
       [
         {text:'Cancel',style:'cancel'},
-        {text:`Continue · £${amountGbp.toFixed(2)}`,onPress:onContinue},
+        {text:amountGbp===null?'Continue to GBP checkout':`Continue · £${amountGbp.toFixed(2)}`,onPress:onContinue},
       ]
     );
   }
@@ -121,7 +121,7 @@ export default function EventDetailsScreen(){
     confirmGbpCardCharge(displayedTotal,()=>void checkoutInGbp());
   }
   function checkoutWaitlistOffer(ticket:TicketType,offer:WaitlistEntry){
-    confirmGbpCardCharge(ticket.price*1.05,()=>void checkoutWaitlistOfferInGbp(ticket,offer));
+    confirmGbpCardCharge(null,()=>void checkoutWaitlistOfferInGbp(ticket,offer));
   }
 
   async function addGoogleCalendar(){if(!event)return;const start=new Date(event.date);const end=event.endDate?new Date(event.endDate):new Date(start.getTime()+3*60*60*1000);const stamp=(d:Date)=>d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z');const url=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${stamp(start)}/${stamp(end)}&details=${encodeURIComponent(`${event.description||event.title}\n${API_BASE}/events/${event.id}`)}&location=${encodeURIComponent(`${event.venue}, ${event.location}`)}`;await WebBrowser.openBrowserAsync(url);}
